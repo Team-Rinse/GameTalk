@@ -18,7 +18,6 @@ public class MyProfile extends JFrame {
 	 * Create the frame.
 	 */
 	public MyProfile() {
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 230, 440);
 		contentPane = new JPanel();
 		contentPane.setBackground(new Color(255, 255, 255));

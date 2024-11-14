@@ -1,6 +1,9 @@
+import java.awt.EventQueue;
+
 public class Main {
     public static void main(String[] args) {
-        TalkApp app = new TalkApp();
-        app.run();
+    	EventQueue.invokeLater(() -> {
+            new TalkApp();
+        });
     }
 }
