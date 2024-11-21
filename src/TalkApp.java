@@ -11,7 +11,7 @@ public class TalkApp extends JFrame {
 	private MainPanel mainPanel;
 	private ChatPanel chatPanel;
 	
-    public TalkApp() {
+    public TalkApp(String userName) {
         super("Kakao Talk");
         setVisible(true);
         setSize(380, 635);
@@ -38,7 +38,7 @@ public class TalkApp extends JFrame {
 					panel.remove(chatPanel);
 					chatPanel = null;
 				} 
-				mainPanel = new MainPanel();
+				mainPanel = new MainPanel(userName);
 				panel.add(mainPanel);
 				repaint();
 				revalidate();
@@ -78,7 +78,7 @@ public class TalkApp extends JFrame {
         optionButton.setFocusPainted(false);
         panel.add(optionButton);
         
-        mainPanel = new MainPanel();
+        mainPanel = new MainPanel(userName);
         panel.add(mainPanel);
     }
 

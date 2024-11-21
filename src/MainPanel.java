@@ -10,11 +10,11 @@ import java.util.prefs.Preferences;
 public class MainPanel extends JPanel {
     private static final long serialVersionUID = 1L;
 
-    private JLabel nameLabel;  // 이름을 표시할 JLabel
-    private JLabel profilePicLabel;  // 프로필 이미지를 표시할 JLabel
+    public JLabel nameLabel;  // 이름을 표시할 JLabel
+    public JLabel profilePicLabel;  // 프로필 이미지를 표시할 JLabel
     private Preferences prefs;  // Preferences 객체 추가
 
-    public MainPanel() {
+    public MainPanel(String userName) {
         prefs = Preferences.userNodeForPackage(MainPanel.class);  // Preferences 초기화
         setBackground(Color.WHITE);
         setBounds(73, 0, 307, 613);
@@ -40,7 +40,7 @@ public class MainPanel extends JPanel {
         add(myProfileButton);
 
         // 이름을 표시할 JLabel을 생성합니다.
-        nameLabel = new JLabel(getSavedName());  // 이름을 Preferences에서 가져옴
+        nameLabel = new JLabel(userName);  // 이름을 Preferences에서 가져옴
         nameLabel.setFont(new Font("Kakao", nameLabel.getFont().getStyle(), nameLabel.getFont().getSize()));
         nameLabel.setBounds(80, 62, 100, 16);
         add(nameLabel);
@@ -68,7 +68,7 @@ public class MainPanel extends JPanel {
     }
 
     // 이름을 업데이트하는 메서드를 추가합니다.
-    public void updateName(String newName) {
+    public void setUserName(String newName) {
         nameLabel.setText(newName);  // MainPanel에서 JLabel을 통해 이름을 업데이트합니다.
         prefs.put("userName", newName);  // 변경된 이름을 Preferences에 저장
     }
@@ -76,10 +76,5 @@ public class MainPanel extends JPanel {
     // 프로필 이미지를 업데이트하는 메서드를 추가합니다.
     public void updateProfileImage(Image newImage) {
         profilePicLabel.setIcon(new ImageIcon(newImage));  // MainPanel에서 JLabel을 통해 프로필 이미지를 업데이트합니다.
-    }
-
-    // Preferences에서 이름을 가져오는 메서드
-    private String getSavedName() {
-        return prefs.get("userName", "전아린");  // 저장된 이름을 가져오고, 없으면 기본값 "전아린"을 반환
     }
 }

@@ -18,7 +18,6 @@ public class MyProfile extends JFrame {
 
     public MyProfile(MainPanel mainPanel) {
         this.mainPanel = mainPanel;  // MainPanel 객체를 받아옴
-        prefs = Preferences.userNodeForPackage(MyProfile.class);
 
         setBounds(100, 100, 230, 440);
         contentPane = new JPanel();
@@ -29,11 +28,10 @@ public class MyProfile extends JFrame {
         contentPane.setLayout(null);
 
         profilePic = new JLabel();
-        String savedImagePath = prefs.get("profileImagePath", null);
+        ImageIcon profileIcon = (ImageIcon) mainPanel.profilePicLabel.getIcon();  // MainPanel의 profilePicLabel에서 아이콘 가져오기
 
-        if (savedImagePath != null) {
+        if (profileIcon != null) {
             // 이미지가 있으면 해당 이미지를 설정
-            ImageIcon profileIcon = new ImageIcon(savedImagePath);
             Image profileImage = profileIcon.getImage().getScaledInstance(90, 90, Image.SCALE_SMOOTH);
             profilePic.setIcon(new ImageIcon(profileImage));
         } else {
@@ -56,7 +54,7 @@ public class MyProfile extends JFrame {
         });
         contentPane.add(editProfilePicBtn);
 
-        nameField = new JTextField(prefs.get("userName", "전아린"));  // Preferences에서 이름을 가져옴
+        nameField = new JTextField(mainPanel.nameLabel.getText());
         nameField.setBounds(70, 297, 90, 20);
         nameField.setBorder(null);
         contentPane.add(nameField);
@@ -70,7 +68,7 @@ public class MyProfile extends JFrame {
                 nameField.setEditable(!nameField.isEditable());
                 if (!nameField.isEditable()) {
                     nameField.setBackground(Color.WHITE);
-                    mainPanel.updateName(nameField.getText());  // 이름 변경 후 MainPanel에 반영
+                    mainPanel.setUserName(nameField.getText());  // 이름 변경 후 MainPanel에 반영
                     dispose();  // 창 닫기
                 } else {
                     nameField.setBackground(new Color(240, 240, 240));
