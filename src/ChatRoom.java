@@ -16,25 +16,25 @@ public class ChatRoom extends JFrame {
     private List<String> participants;
 
     public ChatRoom(String chatId, List<String> participants) {
-    	this.chatId = chatId;
-    	this.participants = participants;
-    	
-    	String users = "";
-    	for(String s : participants) {
-    		if (!s.equals(ClientSocket.name)) { // 본인 이름 제외
+        this.chatId = chatId;
+        this.participants = participants;
+
+        String users = "";
+        for(String s : participants) {
+            if (!s.equals(ClientSocket.name)) { // 본인 이름 제외
                 if (users.length() > 0) {
                     users += ", "; // 쉼표 추가
                 }
                 users += s;
             }
-    	}
-    	setTitle(users);
-    	setSize(380, 635);
-    	setBackground(new Color(0xCCDAE7));
-    	
+        }
+        setTitle(users);
+        setSize(380, 635);
+        setBackground(new Color(0xCCDAE7));
+
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
-        
+
         // 상단 바 영역
         JPanel topBar = new JPanel();
         topBar.setLayout(null);
@@ -54,6 +54,33 @@ public class ChatRoom extends JFrame {
         participantCount.setForeground(Color.DARK_GRAY);
         participantCount.setBounds(60, 10, 20, 40);
         topBar.add(participantCount);
+
+        JButton exitButton = new JButton("EXIT");
+        exitButton.setBounds(230, 20, 60, 20);
+        exitButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    // 서버에 LEAVE_CHAT 요청 보내기
+                    ClientSocket.getDataOutputStream().writeUTF("LEAVE_CHAT");
+                    ClientSocket.getDataOutputStream().writeUTF(chatId); // 채팅방 ID 전송
+                    ClientSocket.getDataOutputStream().flush();
+
+                    // ChatPanel에서 채팅방 삭제
+                    SwingUtilities.invokeLater(() -> {
+                        if (ClientSocket.chatPanel != null) {
+                            ClientSocket.chatPanel.removeChatEntry(getTitle());
+                        }
+                    });
+
+                    // 채팅방 닫기
+                    dispose();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+        topBar.add(exitButton);
 
         // 중앙 메시지 영역 (스크롤 가능)
         messagePanel = new JPanel();
@@ -104,7 +131,7 @@ public class ChatRoom extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if(!messageInput.getText().trim().isEmpty() && !messageInput.getText().equals("메시지 입력")) {
-                	String myMsg = messageInput.getText();
+                    String myMsg = messageInput.getText();
                     addMyMessage(myMsg);
                     messageInput.setText("");
                     ClientSocket.sendTextMessage(myMsg);
@@ -114,7 +141,7 @@ public class ChatRoom extends JFrame {
         bottomPanel.add(sendButton, BorderLayout.EAST);
 
         panel.add(bottomPanel, BorderLayout.SOUTH);
-        
+
         add(panel);
 
         // 테스트용 메시지 추가
@@ -284,6 +311,25 @@ public class ChatRoom extends JFrame {
         }
 
         return label;
+    }
+
+    public String getChatId() {
+        return chatId;
+    }
+
+    // 시스템 메시지 추가
+    public void addSystemMessage(String text) {
+        JPanel msgPanel = new JPanel(new BorderLayout());
+        msgPanel.setOpaque(false);
+
+        JLabel messageLabel = new JLabel("<html><body style='width:auto; color:gray;'>" + text + "</body></html>");
+        messageLabel.setFont(new Font("Kakao", Font.ITALIC, 12));
+        msgPanel.add(messageLabel, BorderLayout.CENTER);
+
+        messagePanel.add(msgPanel);
+        messagePanel.add(Box.createVerticalStrut(10)); // 메시지 간 간격
+        messagePanel.revalidate();
+        messagePanel.repaint();
     }
 
 }

@@ -25,17 +25,17 @@ public class MainPanel extends JPanel {
 
     public JLabel nameLabel;  // 이름을 표시할 JLabel
     public JLabel profilePicLabel;  // 프로필 이미지를 표시할 JLabel
-    
+
     private JPanel friendListPanel; // 친구 리스트를 보여줄 패널
     private JScrollPane friendScrollPane;
-    
+
     private JButton startChatButton;
-    private JButton createChatButton; 
+    private JButton createChatButton;
     private boolean showingCheckBoxes = false; // 체크박스 표시 상태
     private List<JCheckBox> friendCheckBoxes = new ArrayList<>(); // 체크박스 관리를 위한 리스트
-    
+
     public MainPanel(String userName) {
-    	ClientSocket.setMainPanel(this);
+        ClientSocket.setMainPanel(this);
         setBackground(Color.WHITE);
         setBounds(73, 0, 307, 613);
         setLayout(null);
@@ -52,26 +52,26 @@ public class MainPanel extends JPanel {
             // MyProfile을 호출할 때 MainPanel을 전달
             MyProfile mp = new MyProfile(MainPanel.this);  // MainPanel 객체 전달
         });
-        
-                startChatButton = new JButton("Start Chat");
-                startChatButton.setBounds(186, 9, 100, 30);
-                startChatButton.addActionListener(e -> {
-                    // Start Chat 버튼 클릭 시 체크박스 표시 상태 토글
-                    showingCheckBoxes = !showingCheckBoxes;
-                    updateFriends(ClientSocket.currentUsers); 
-                    
-                    if (showingCheckBoxes) {
-                        // 체크박스를 보여주는 상태가 되면, "Create Chat" 버튼 활성화
-                        createChatButton.setVisible(true);
-                    } else {
-                        // 체크박스 숨김 상태면 Create Chat 버튼 숨기기
-                        createChatButton.setVisible(false);
-                    }
-                });
-                startChatButton.setText("Cancel"); 
-                startChatButton.setText("Start Chat");
-                add(startChatButton);
-                startChatButton.setText("Start Chat");
+
+        startChatButton = new JButton("Start Chat");
+        startChatButton.setBounds(186, 9, 100, 30);
+        startChatButton.addActionListener(e -> {
+            // Start Chat 버튼 클릭 시 체크박스 표시 상태 토글
+            showingCheckBoxes = !showingCheckBoxes;
+            updateFriends(ClientSocket.currentUsers);
+
+            if (showingCheckBoxes) {
+                // 체크박스를 보여주는 상태가 되면, "Create Chat" 버튼 활성화
+                createChatButton.setVisible(true);
+            } else {
+                // 체크박스 숨김 상태면 Create Chat 버튼 숨기기
+                createChatButton.setVisible(false);
+            }
+        });
+        startChatButton.setText("Cancel");
+        startChatButton.setText("Start Chat");
+        add(startChatButton);
+        startChatButton.setText("Start Chat");
         add(myProfileButton);
 
         // 이름을 표시할 JLabel을 생성합니다.
@@ -79,11 +79,11 @@ public class MainPanel extends JPanel {
         nameLabel.setFont(new Font("Kakao", nameLabel.getFont().getStyle(), nameLabel.getFont().getSize()));
         nameLabel.setBounds(80, 62, 100, 16);
         add(nameLabel);
-        
-                JLabel friendLabel = new JLabel("친구");
-                friendLabel.setBounds(18, 6, 34, 35);
-                friendLabel.setFont(new Font("Kakao", Font.PLAIN, 17));
-                add(friendLabel);
+
+        JLabel friendLabel = new JLabel("친구");
+        friendLabel.setBounds(18, 6, 34, 35);
+        friendLabel.setFont(new Font("Kakao", Font.PLAIN, 17));
+        add(friendLabel);
 
         profilePicLabel = new JLabel();
         profilePicLabel.setBounds(14, 40, 60, 60);
@@ -94,7 +94,7 @@ public class MainPanel extends JPanel {
         line.setBounds(18, 108, 268, 2);
         line.setOpaque(true);
         add(line);
-        
+
         createChatButton = new JButton("Create Chat");
         createChatButton.setBounds(103, 242, 100, 30);
         createChatButton.setVisible(false);
@@ -106,14 +106,14 @@ public class MainPanel extends JPanel {
                     selectedUsers.add(cb.getText());
                 }
             }
-            
+
             if (!selectedUsers.isEmpty()) {
                 try {
                     DataOutputStream os = ClientSocket.getDataOutputStream();
                     os.writeUTF("CREATE_CHAT");
                     os.writeInt(selectedUsers.size());
                     for (String user : selectedUsers) {
-                        os.writeUTF(user); 
+                        os.writeUTF(user);
                     }
                     os.flush();
                 } catch (IOException ex) {
@@ -122,32 +122,32 @@ public class MainPanel extends JPanel {
             }
             // 체크박스 모드 비활성화
             showingCheckBoxes = false;
-            updateFriends(ClientSocket.currentUsers); 
+            updateFriends(ClientSocket.currentUsers);
         });
         createChatButton.setVisible(false);
         add(createChatButton);
-        
+
         JLabel friendListLabel = new JLabel("친구");
         friendListLabel.setBounds(0, 0, 61, 16);
         friendListLabel.setForeground(new Color(117, 117, 117));
         friendListLabel.setFont(new Font("Kakao", Font.PLAIN, 13));
-        
+
         friendListPanel = new JPanel();
         friendListPanel.setLayout(null);
         friendListPanel.setBackground(Color.WHITE);
         friendListPanel.add(friendListLabel);
-        
+
         friendScrollPane = new JScrollPane(friendListPanel);
         friendScrollPane.setBounds(18, 130, 268, 400);
         friendScrollPane.setBorder(null);
         add(friendScrollPane);
-        
+
         ClientSocket.requestUserList();
     }
-    
+
     // 친구 목록 업데이트 메서드
     public void updateFriends(List<String> friends) {
-    	friendListPanel.removeAll();
+        friendListPanel.removeAll();
         friendCheckBoxes.clear();
 
         int y = 10;
@@ -172,7 +172,7 @@ public class MainPanel extends JPanel {
             friendNameLabel.setFont(new Font("Kakao", Font.PLAIN, 12));
             friendNameLabel.setBounds(60, y + 17, 200, 16);
             friendListPanel.add(friendNameLabel);
-            
+
             if (showingCheckBoxes) {
                 JCheckBox cb = new JCheckBox();
                 cb.setText(friend);
