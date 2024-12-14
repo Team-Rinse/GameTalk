@@ -63,7 +63,7 @@ public class Server {
         for (UserInfo u : participants) {
             try {
                 u.os.writeUTF("CHAT_CREATED");
-                u.os.writeUTF(chatId); 
+                u.os.writeUTF(chatId);
                 u.os.writeInt(participants.size());
                 for (UserInfo p : participants) {
                     u.os.writeUTF(p.name);
@@ -126,7 +126,7 @@ class ServerThread extends Thread {
 
             // 새로운 유저 입장 알림
             Server.broadcastUserJoin(clientName);
-            
+
             // 메시지를 계속 수신
             while (true) {
                 String messageType = is.readUTF();
@@ -212,6 +212,33 @@ class ServerThread extends Thread {
                         }
                         break;
                     }
+                    case "LEAVE_CHAT": {
+                        String chatId = is.readUTF();
+                        List<UserInfo> participants = Server.chatRooms.get(chatId);
+
+                        if (participants != null) {
+                            // 현재 사용자 제거
+                            participants.removeIf(u -> u.name.equals(userInfo.name));
+
+                            // 채팅방 참가자들에게 퇴장 알림
+                            for (UserInfo participant : participants) {
+                                try {
+                                    participant.os.writeUTF("USER_LEAVE_CHAT");
+                                    participant.os.writeUTF(chatId);
+                                    participant.os.writeUTF(userInfo.name); // 퇴장한 사용자 이름
+                                    participant.os.flush();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+
+                            // 채팅방에서 모든 참여자가 나갔으면 방 삭제
+                            if (participants.isEmpty()) {
+                                Server.chatRooms.remove(chatId);
+                            }
+                        }
+                        break;
+                    }
 
                     default:
                         System.out.println("알 수 없는 메시지 타입: " + messageType);
@@ -238,7 +265,7 @@ class ServerThread extends Thread {
             }
         }
     }
-    
+
     private void sendUserListToClient(UserInfo requester) {
         try {
             List<UserInfo> allUsers = new ArrayList<>(Server.userMap.values());
@@ -302,17 +329,17 @@ class ServerThread extends Thread {
 
 //사용자 정보 관리 클래스
 class UserInfo {
-	String name;
-	byte[] profileImageData;
-	Socket socket;
-	DataOutputStream os;
-	DataInputStream is;
-	
-	public UserInfo(String name, byte[] profileImageData, Socket socket, DataOutputStream os, DataInputStream is) {
-		this.name = name;
-		this.profileImageData = profileImageData;
-		this.socket = socket;
-		this.os = os;
-		this.is = is;
-	}
+    String name;
+    byte[] profileImageData;
+    Socket socket;
+    DataOutputStream os;
+    DataInputStream is;
+
+    public UserInfo(String name, byte[] profileImageData, Socket socket, DataOutputStream os, DataInputStream is) {
+        this.name = name;
+        this.profileImageData = profileImageData;
+        this.socket = socket;
+        this.os = os;
+        this.is = is;
+    }
 }
