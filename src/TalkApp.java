@@ -1,102 +1,84 @@
-
-import java.awt.EventQueue;
-import javax.swing.*;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.GridLayout;
-import java.awt.Image;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+
+import javax.swing.*;
 
 public class TalkApp extends JFrame {
     private MainPanel mainPanel;
     private ChatPanel chatPanel = new ChatPanel();
-    private OptionPanel optionPanel;
+    private OptionPanel optionPanel = new OptionPanel();
 
     public TalkApp(String userName) {
         super("Kakao Talk");
         setVisible(true);
         setSize(380, 635);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        getContentPane().setLayout(new GridLayout(0, 1, 0, 0));
+        getContentPane().setLayout(null);
 
-        JPanel panel = new JPanel();
-        panel.setBackground(new Color(237, 237, 237));
-        getContentPane().add(panel);
-        panel.setLayout(null);
+        // 왼쪽 버튼 패널
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setBounds(0, 0, 60, 635);
+        buttonPanel.setBackground(new Color(237, 237, 237));
+        buttonPanel.setLayout(null);
+        getContentPane().add(buttonPanel);
 
-        ImageIcon icon = new ImageIcon(TalkApp.class.getResource("/icon/user.png")); // 절대 경로로 리소스 불러오기
-        Image userImage = icon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
-        JButton userButton = new JButton(new ImageIcon(userImage));
-        userButton.setLocation(20, 49);
-        userButton.setSize(30, 30);
-        userButton.setContentAreaFilled(false); // 배경 투명하게
-        userButton.setBorderPainted(false);     // 테두리 없애기
-        userButton.setFocusPainted(false);
+        // 오른쪽 콘텐츠 패널 (CardLayout 사용)
+        JPanel contentPanel = new JPanel();
+        contentPanel.setBounds(60, 0, 320, 635);
+        CardLayout cardLayout = new CardLayout();
+        contentPanel.setLayout(cardLayout);
+        getContentPane().add(contentPanel);
+
+        // CardLayout에 각 화면 추가
+        mainPanel = new MainPanel(userName);
+        contentPanel.add(mainPanel, "Main");
+        contentPanel.add(chatPanel, "Chat");
+        contentPanel.add(optionPanel, "Option");
+
+        // 버튼 생성
+        ImageIcon userIcon = new ImageIcon(TalkApp.class.getResource("/icon/user.png"));
+        Image userImage = userIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
+        JButton userButton = createButton(new ImageIcon(userImage), 15, 49);
         userButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(chatPanel != null) {
-                    panel.remove(chatPanel);
-                }
-                mainPanel = new MainPanel(userName);
-                panel.add(mainPanel);
-                repaint();
-                revalidate();
+                cardLayout.show(contentPanel, "Main");
             }
         });
-        panel.add(userButton);
+        buttonPanel.add(userButton);
 
-        JButton chatButton = new JButton("");
-        chatButton.setLocation(20, 103);
         ImageIcon chatIcon = new ImageIcon(TalkApp.class.getResource("/icon/chat.png"));
         Image chatImage = chatIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
-        chatButton.setIcon(new ImageIcon(chatImage));
-        chatButton.setSize(30, 30);
-        chatButton.setContentAreaFilled(false);
-        chatButton.setBorderPainted(false);
-        chatButton.setFocusPainted(false);
+        JButton chatButton = createButton(new ImageIcon(chatImage), 15, 103);
         chatButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(mainPanel != null) {
-                    panel.remove(mainPanel);
-                    mainPanel = null;
-                }
-                panel.add(chatPanel);
-                repaint();
-                revalidate();
+                cardLayout.show(contentPanel, "Chat");
             }
         });
-        panel.add(chatButton);
+        buttonPanel.add(chatButton);
 
-        JButton optionButton = new JButton("");
         ImageIcon optionIcon = new ImageIcon(TalkApp.class.getResource("/icon/option.png"));
         Image optionImage = optionIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
-        optionButton.setIcon(new ImageIcon(optionImage));
-        optionButton.setSize(30, 30);
-        optionButton.setLocation(20, 157);
-        optionButton.setContentAreaFilled(false);
-        optionButton.setBorderPainted(false);
-        optionButton.setFocusPainted(false);
+        JButton optionButton = createButton(new ImageIcon(optionImage), 15, 157);
         optionButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(mainPanel != null) {
-                    panel.remove(mainPanel);
-                    mainPanel = null;
-                }
-                optionPanel = new OptionPanel();
-                panel.add(optionPanel);
-                repaint();
-                revalidate();
+                cardLayout.show(contentPanel, "Option");
             }
         });
-        panel.add(optionButton);
+        buttonPanel.add(optionButton);
 
-        mainPanel = new MainPanel(userName);
-        panel.add(mainPanel);
         ClientSocket.setChatPanel(chatPanel);
     }
 
+    private JButton createButton(ImageIcon icon, int x, int y) {
+        JButton button = new JButton(icon);
+        button.setBounds(x, y, 30, 30);
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        return button;
+    }
 }
