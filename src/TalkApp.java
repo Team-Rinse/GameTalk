@@ -1,3 +1,4 @@
+
 import java.awt.EventQueue;
 import javax.swing.*;
 import java.awt.Color;
@@ -9,7 +10,8 @@ import java.awt.event.ActionListener;
 
 public class TalkApp extends JFrame {
     private MainPanel mainPanel;
-    private ChatPanel chatPanel;
+    private ChatPanel chatPanel = new ChatPanel();
+    private OptionPanel optionPanel;
 
     public TalkApp(String userName) {
         super("Kakao Talk");
@@ -36,7 +38,6 @@ public class TalkApp extends JFrame {
             public void actionPerformed(ActionEvent e) {
                 if(chatPanel != null) {
                     panel.remove(chatPanel);
-                    chatPanel = null;
                 }
                 mainPanel = new MainPanel(userName);
                 panel.add(mainPanel);
@@ -62,7 +63,6 @@ public class TalkApp extends JFrame {
                     panel.remove(mainPanel);
                     mainPanel = null;
                 }
-                chatPanel = new ChatPanel();
                 panel.add(chatPanel);
                 repaint();
                 revalidate();
@@ -71,19 +71,32 @@ public class TalkApp extends JFrame {
         panel.add(chatButton);
 
         JButton optionButton = new JButton("");
+        ImageIcon optionIcon = new ImageIcon(TalkApp.class.getResource("/icon/option.png"));
+        Image optionImage = optionIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
+        optionButton.setIcon(new ImageIcon(optionImage));
         optionButton.setSize(30, 30);
-        optionButton.setLocation(20, 145);
+        optionButton.setLocation(20, 157);
         optionButton.setContentAreaFilled(false);
         optionButton.setBorderPainted(false);
         optionButton.setFocusPainted(false);
+        optionButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if(mainPanel != null) {
+                    panel.remove(mainPanel);
+                    mainPanel = null;
+                }
+                optionPanel = new OptionPanel();
+                panel.add(optionPanel);
+                repaint();
+                revalidate();
+            }
+        });
         panel.add(optionButton);
 
         mainPanel = new MainPanel(userName);
         panel.add(mainPanel);
-    }
-
-    public void run() {
-        // run 메서드 구현
+        ClientSocket.setChatPanel(chatPanel);
     }
 
 }
