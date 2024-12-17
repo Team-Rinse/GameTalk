@@ -11,15 +11,18 @@ public class MyProfile extends JFrame {
     private static final long serialVersionUID = 1L;
     private JPanel contentPane;
     private JTextField nameField;
+    private JTextField statusMessageField; // 상태 메시지 필드 추가
     private JLabel profilePic;
-    private MainPanel mainPanel;  // MainPanel 객체를 저장할 변수 추가
+    private MainPanel mainPanel; // MainPanel 객체를 저장할 변수 추가
 
     private Preferences prefs;
 
     public MyProfile(MainPanel mainPanel) {
-        this.mainPanel = mainPanel;  // MainPanel 객체를 받아옴
+        this.mainPanel = mainPanel; // MainPanel 객체를 받아옴
 
-        setBounds(100, 100, 230, 440);
+        prefs = Preferences.userNodeForPackage(MyProfile.class);
+
+        setBounds(100, 100, 230, 500); // 창 높이를 늘림 (상태 메시지 추가)
         contentPane = new JPanel();
         contentPane.setBackground(new Color(255, 255, 255));
         contentPane.setBorder(new LineBorder(new Color(0, 0, 0)));
@@ -28,7 +31,7 @@ public class MyProfile extends JFrame {
         contentPane.setLayout(null);
 
         profilePic = new JLabel();
-        ImageIcon profileIcon = (ImageIcon) mainPanel.profilePicLabel.getIcon();  // MainPanel의 profilePicLabel에서 아이콘 가져오기
+        ImageIcon profileIcon = (ImageIcon) mainPanel.profilePicLabel.getIcon(); // MainPanel의 profilePicLabel에서 아이콘 가져오기
 
         if (profileIcon != null) {
             // 이미지가 있으면 해당 이미지를 설정
@@ -38,14 +41,14 @@ public class MyProfile extends JFrame {
             // 이미지가 없으면 기본 이미지로 설정하지 않음 (빈 아이콘 설정)
             profilePic.setIcon(null);
         }
-        profilePic.setBounds(70, 207, 90, 90);
+        profilePic.setBounds(70, 150, 90, 90);
         contentPane.add(profilePic);
 
         JLabel editProfilePicBtn = new JLabel();
         ImageIcon pencilIcon = new ImageIcon(TalkApp.class.getResource("/icon/pencil.png"));
         Image pencilImage = pencilIcon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
         editProfilePicBtn.setIcon(new ImageIcon(pencilImage));
-        editProfilePicBtn.setBounds(165, 235, 16, 16);
+        editProfilePicBtn.setBounds(165, 178, 16, 16);
         editProfilePicBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -55,21 +58,21 @@ public class MyProfile extends JFrame {
         contentPane.add(editProfilePicBtn);
 
         nameField = new JTextField(mainPanel.nameLabel.getText());
-        nameField.setBounds(70, 297, 90, 20);
+        nameField.setBounds(70, 260, 90, 20);
         nameField.setBorder(null);
         contentPane.add(nameField);
 
         JLabel editNameBtn = new JLabel();
         editNameBtn.setIcon(new ImageIcon(pencilImage));
-        editNameBtn.setBounds(165, 297, 16, 16);
+        editNameBtn.setBounds(165, 260, 16, 16);
         editNameBtn.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 nameField.setEditable(!nameField.isEditable());
                 if (!nameField.isEditable()) {
                     nameField.setBackground(Color.WHITE);
-                    mainPanel.setUserName(nameField.getText());  // 이름 변경 후 MainPanel에 반영
-                    dispose();  // 창 닫기
+                    mainPanel.setUserName(nameField.getText()); // 이름 변경 후 MainPanel에 반영
+                    prefs.put("userName", nameField.getText()); // 이름 저장
                 } else {
                     nameField.setBackground(new Color(240, 240, 240));
                     nameField.requestFocus();
@@ -77,6 +80,33 @@ public class MyProfile extends JFrame {
             }
         });
         contentPane.add(editNameBtn);
+
+        // 상태 메시지 추가
+        statusMessageField = new JTextField(prefs.get("statusMessage", "상태 메시지를 입력하세요")); // 저장된 상태 메시지 불러오기
+        statusMessageField.setBounds(70, 300, 90, 20);
+        statusMessageField.setBorder(null);
+        contentPane.add(statusMessageField);
+
+        JLabel editStatusMessageBtn = new JLabel();
+        editStatusMessageBtn.setIcon(new ImageIcon(pencilImage));
+        editStatusMessageBtn.setBounds(165, 300, 16, 16);
+        editStatusMessageBtn.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                statusMessageField.setEditable(!statusMessageField.isEditable());
+                if (!statusMessageField.isEditable()) {
+                    statusMessageField.setBackground(Color.WHITE);
+                    String newStatusMessage = statusMessageField.getText();
+                    prefs.put("statusMessage", newStatusMessage); // 상태 메시지 저장
+                    mainPanel.updateStatusMessage(newStatusMessage); // MainPanel에 반영
+                } else {
+                    statusMessageField.setBackground(new Color(240, 240, 240));
+                    statusMessageField.requestFocus();
+                }
+            }
+        });
+
+        contentPane.add(editStatusMessageBtn);
 
         JLabel separator = new JLabel("");
         separator.setBackground(new Color(240, 240, 240));
@@ -96,8 +126,9 @@ public class MyProfile extends JFrame {
             Image newProfileImage = newProfileIcon.getImage().getScaledInstance(90, 90, Image.SCALE_SMOOTH);
             profilePic.setIcon(new ImageIcon(newProfileImage));
 
-            prefs.put("profileImagePath", selectedFile.getPath());  // 선택한 이미지 경로를 Preferences에 저장
-            mainPanel.updateProfileImage(newProfileImage);  // MainPanel에 반영
+            Preferences prefs = Preferences.userNodeForPackage(MyProfile.class);
+            prefs.put("profileImagePath", selectedFile.getPath()); // 선택한 이미지 경로를 Preferences에 저장
+            mainPanel.updateProfileImage(newProfileImage); // MainPanel에 반영
         }
     }
 }
