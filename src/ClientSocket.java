@@ -213,6 +213,18 @@ public class ClientSocket {
 			});
 		}
 	}
+	
+	public static void sendImageMessage(String imagePath) {
+	    try {
+	        // 서버로 이미지 메시지 전송 요청
+	        getDataOutputStream().writeUTF("IMAGE_MESSAGE"); // 메시지 타입 전송
+	        getDataOutputStream().writeUTF(imagePath);       // 이미지 파일 경로 전송
+	        getDataOutputStream().flush();
+	    } catch (IOException e) {
+	        e.printStackTrace();
+	    }
+	}
+
 
 }
 
