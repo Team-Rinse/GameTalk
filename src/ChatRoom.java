@@ -3,6 +3,8 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.util.List;
 
@@ -95,7 +97,7 @@ public class ChatRoom extends JFrame {
 
         // 하단 입력 영역
         JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.setPreferredSize(new Dimension(307, 50));
+        bottomPanel.setPreferredSize(new Dimension(307, 80));
         bottomPanel.setBackground(Color.WHITE);
 
         messageInput = new JTextField();
@@ -120,6 +122,20 @@ public class ChatRoom extends JFrame {
         });
 
         bottomPanel.add(messageInput, BorderLayout.CENTER);
+        
+     // 이모티콘 버튼 추가
+        JLabel emojiButton = new JLabel(new ImageIcon(getClass().getResource("/emoji/emo.png")));
+        emojiButton.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        emojiButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        emojiButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                showEmojiPopup(emojiButton);
+            }
+        });
+
+        bottomPanel.add(emojiButton, BorderLayout.WEST);
 
         sendButton = new JButton("전송");
         sendButton.setFont(new Font("Kakao", Font.PLAIN, 14));
@@ -211,18 +227,69 @@ public class ChatRoom extends JFrame {
         messagePanel.revalidate();
         messagePanel.repaint();
     }
+    
+    private void showEmojiPopup(JLabel emojiButton) {
+        // 팝업 패널과 스크롤바 추가
+        JPanel emojiPanel = new JPanel(new GridLayout(4, 3, 5, 5)); // 4행 3열, 각 요소 간 간격 5px
+        emojiPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // 외곽 여백
+        emojiPanel.setOpaque(true);
+        emojiPanel.setBackground(Color.WHITE);
+
+        // 이모티콘 목록 로드
+        String[] emojiFiles = { 
+            "emo1.png", "emo2.png", "emo3.png", 
+            "emo4.png", "emo5.png", "emo6.png", 
+            "emo7.png", "emo8.png", "emo9.png", 
+            "emo10.png", "emo11.png", "emo12.png"
+        };
+
+        for (String emojiFile : emojiFiles) {
+        	ImageIcon originalIcon = new ImageIcon(getClass().getResource("/emoji/" + emojiFile));
+            Image scaledImage = originalIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+            ImageIcon resizedIcon = new ImageIcon(scaledImage);
+
+            // 이모티콘 버튼 생성
+            JButton emojiButtonItem = new JButton(resizedIcon);
+            emojiButtonItem.setPreferredSize(new Dimension(50, 50)); // 버튼 크기 설정
+            emojiButtonItem.setBorderPainted(false); // 버튼 테두리 제거
+            emojiButtonItem.setContentAreaFilled(false); // 버튼 배경 제거
+            emojiButtonItem.setFocusPainted(false); // 포커스 테두리 제거
+            emojiButtonItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    addImageMessage("나", "/emoji/" + emojiFile); // 선택된 이모티콘 메시지로 추가
+                    ClientSocket.sendImageMessage("/emoji/" + emojiFile); // 서버로 이모티콘 메시지 전송
+                }
+            });
+            emojiPanel.add(emojiButtonItem); // 버튼을 패널에 추가
+        }
+
+        // 스크롤 가능한 팝업 구성
+        JScrollPane scrollPane = new JScrollPane(emojiPanel);
+        scrollPane.setPreferredSize(new Dimension(200, 200)); // 팝업 크기 설정
+        scrollPane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+
+        // 팝업 메뉴에 스크롤 패널 추가
+        JPopupMenu emojiPopup = new JPopupMenu();
+        emojiPopup.add(scrollPane);
+
+        // 이모티콘 버튼 아래에 팝업 표시
+        emojiPopup.show(emojiButton, 0, emojiButton.getHeight());
+    }
+
 
     // 이미지 메시지(일단 다른 사람 메시지 스타일)
     private void addImageMessage(String senderName, String imagePath) {
         JPanel msgPanel = new JPanel(new BorderLayout());
         msgPanel.setOpaque(false);
 
+        // 프로필 아이콘 생성 (기본 왼쪽 정렬)
         JLabel profilePic = new JLabel();
         ImageIcon profileIcon = new ImageIcon(TalkApp.class.getResource("/icon/profile.png"));
         Image profileImage = profileIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
         profilePic.setIcon(new ImageIcon(profileImage));
-        msgPanel.add(profilePic, BorderLayout.WEST);
 
+        // 텍스트 패널 (송신자 이름과 이모티콘 포함)
         JPanel textPanel = new JPanel();
         textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
         textPanel.setOpaque(false);
@@ -231,23 +298,35 @@ public class ChatRoom extends JFrame {
         nameLabel.setFont(new Font("Kakao", Font.PLAIN, 12));
         textPanel.add(nameLabel);
 
-        // 이미지 라벨
+        // 이미지 라벨 생성
         JLabel imageLabel = new JLabel();
         ImageIcon imgIcon = new ImageIcon(TalkApp.class.getResource(imagePath));
         Image img = imgIcon.getImage().getScaledInstance(100, 60, Image.SCALE_SMOOTH);
         imageLabel.setIcon(new ImageIcon(img));
         imageLabel.setOpaque(true);
-        imageLabel.setBackground(Color.WHITE);
-        imageLabel.setBorder(BorderFactory.createEmptyBorder(5,5,5,5));
+        imageLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+
+        // 송신자별 스타일 적용
+        if (senderName.equals("나")) {
+            // 내 메시지: 오른쪽 정렬, 노란색 배경
+            msgPanel.add(textPanel, BorderLayout.EAST); // 오른쪽 정렬
+            imageLabel.setBackground(new Color(255, 240, 140)); // 노란색
+        } else {
+            // 상대방 메시지: 왼쪽 정렬, 흰색 배경
+            msgPanel.add(profilePic, BorderLayout.WEST); // 프로필 왼쪽 정렬
+            msgPanel.add(textPanel, BorderLayout.CENTER); // 텍스트 중간 정렬
+            imageLabel.setBackground(Color.WHITE); // 흰색
+        }
+
         textPanel.add(imageLabel);
 
-        msgPanel.add(textPanel, BorderLayout.CENTER);
-
+        // 메시지 패널 추가
         messagePanel.add(msgPanel);
-        messagePanel.add(Box.createVerticalStrut(10));
+        messagePanel.add(Box.createVerticalStrut(10)); // 간격 추가
         messagePanel.revalidate();
         messagePanel.repaint();
     }
+
 
     // 영상 메시지(썸네일로 표시, 비슷하게 이미지와 동일)
     private void addVideoMessage(String senderName, String videoThumbPath) {
