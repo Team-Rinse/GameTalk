@@ -41,7 +41,7 @@ public class MainPanel extends JPanel {
 //        if (savedProfileImagePath != null && !savedProfileImagePath.isEmpty()) {
 //            profileIcon = new ImageIcon(savedProfileImagePath);
 //        } else {
-            profileIcon = new ImageIcon(TalkApp.class.getResource("/icon/profile.png"));
+        profileIcon = new ImageIcon(TalkApp.class.getResource("/icon/profile.png"));
 //        }
         Image profileImage = profileIcon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
 
@@ -69,9 +69,9 @@ public class MainPanel extends JPanel {
 
         // 상태 메시지를 표시할 JLabel을 생성합니다.
 //        if (savedStatusMessage.isEmpty()) {
-            statusMessageLabel = new JLabel("상태 메시지를 입력하세요");
-            statusMessageLabel.setFont(new Font("Kakao", Font.ITALIC, 12));
-            statusMessageLabel.setForeground(Color.GRAY);
+        statusMessageLabel = new JLabel("상태 메시지를 입력하세요");
+        statusMessageLabel.setFont(new Font("Kakao", Font.ITALIC, 12));
+        statusMessageLabel.setForeground(Color.GRAY);
 //        } else {
 //            statusMessageLabel = new JLabel(savedStatusMessage);
 //            statusMessageLabel.setFont(new Font("Kakao", Font.PLAIN, 12));

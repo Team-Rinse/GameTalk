@@ -2,11 +2,7 @@ package server;
 
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Server {
@@ -19,12 +15,14 @@ public class Server {
     static Map<String, Boolean> raceInProgress = new HashMap<>();
     static HashMap<String, HashMap<String, Boolean>> catchmindReady = new HashMap<>();
     static Map<String, String> chatDrawerMap = new HashMap<>();
+    static List<String> catchmindWords = new ArrayList<>();
+    static Map<String, String> chatAnswerMap = new HashMap<>();
 
     public static void main(String[] args) throws IOException {
         ServerSocket chatServer = new ServerSocket(6000);
         Socket socket = null;
         try {
-            while(true) {
+            while (true) {
                 socket = chatServer.accept();
                 ServerThread serverThread = new ServerThread(socket);
                 serverThread.start();
@@ -32,7 +30,7 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
-            if(socket != null && !socket.isClosed()) {
+            if (socket != null && !socket.isClosed()) {
                 socket.close();
             }
         }
@@ -45,16 +43,16 @@ public class Server {
 
         for (UserInfo u : participants) {
             try {
-                u.os.writeUTF("CHAT_MESSAGE");
-                u.os.writeUTF(chatId);
-                u.os.writeUTF(msgType);
-                if (msgType.equals("TEXT")) {
-                    u.os.writeUTF(sender);
-                    u.os.writeUTF(text);
-                } else if (msgType.equals("IMAGE") || msgType.equals("VIDEO")) {
-                    u.os.writeUTF(sender);
-                    u.os.writeInt(data.length);
-                    u.os.write(data);
+                u.os.writeUTF("CHAT_MESSAGE");  // 메시지 타입
+                u.os.writeUTF(chatId);         // 채팅방 ID
+                u.os.writeUTF(msgType);        // 메시지 유형(TEXT, IMAGE 등)
+                if ("TEXT".equals(msgType)) {
+                    u.os.writeUTF(sender);    // 메시지 보낸 사람
+                    u.os.writeUTF(text);      // 메시지 내용
+                } else if ("IMAGE".equals(msgType) && data != null) {
+                    u.os.writeUTF(sender);    // 메시지 보낸 사람
+                    u.os.writeInt(data.length); // 이미지 데이터 길이
+                    u.os.write(data);          // 이미지 데이터
                 }
                 u.os.flush();
             } catch (IOException e) {
@@ -68,7 +66,7 @@ public class Server {
         for (UserInfo u : participants) {
             try {
                 u.os.writeUTF("CHAT_CREATED");
-                u.os.writeUTF(chatId); 
+                u.os.writeUTF(chatId);
                 u.os.writeInt(participants.size());
                 for (UserInfo p : participants) {
                     u.os.writeUTF(p.name);
@@ -162,6 +160,7 @@ public class Server {
         if (newPosition >= 100) {
             raceInProgress.put(chatId, false);
             broadcastRaceResult(chatId, playerName);
+            awardPointsRacing(chatId, playerName); // 먼저 도착한 플레이어에게 포인트 부여
         }
     }
 
@@ -299,15 +298,44 @@ public class Server {
         }
     }
 
+    // 캐치마인드 단어 목록 로드 메서드
+    private static void loadCatchmindWords() {
+        File file = new File("../text/catchmind_words.txt");
+        if (!file.exists()) {
+            System.err.println("Catchmind words file not found: text/catchmind_words.txt");
+            return;
+        }
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            catchmindWords.clear(); // 기존 단어 목록 초기화
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    catchmindWords.add(line);
+                }
+            }
+            System.out.println("Loaded " + catchmindWords.size() + " catchmind words.");
+        } catch (IOException e) {
+            System.err.println("Error reading catchmind words file: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     private static void startCatchmindGame(String chatId) {
+        loadCatchmindWords();
+
         List<UserInfo> participants = Server.chatRooms.get(chatId);
         if (participants != null && !participants.isEmpty()) {
             // 랜덤 출제자 선정
-            UserInfo drawer = participants.get((int)(Math.random() * participants.size()));
-            String answerWord = "사과"; // 예제 정답
-
+            UserInfo drawer = participants.get((int) (Math.random() * participants.size()));
             // 출제자 이름을 채팅방별로 저장
             chatDrawerMap.put(chatId, drawer.name);
+
+            Random rand = new Random();
+            String answerWord = catchmindWords.get(rand.nextInt(catchmindWords.size()));
+
+            chatAnswerMap.put(chatId, answerWord);
 
             try {
                 // 출제자에게 정답 알림
@@ -403,6 +431,25 @@ public class Server {
         }
     }
 
+    // 레이싱 게임에 특화된 포인트 부여 메서드
+    public static void awardPointsRacing(String chatId, String winnerName) {
+        List<UserInfo> participants = chatRooms.get(chatId);
+        if (participants == null) return;
+
+        UserInfo winner = null;
+        for (UserInfo u : participants) {
+            if (u.name.equals(winnerName)) {
+                winner = u;
+                break;
+            }
+        }
+
+        if (winner != null) {
+            winner.addPoints(100); // 예: 100 포인트
+            notifyPointsUpdated(winner);
+        }
+    }
+
     public static void awardPoints(String chatId, String winnerName, boolean timeUp) {
         List<UserInfo> participants = chatRooms.get(chatId);
         if (participants == null) return;
@@ -472,13 +519,13 @@ public class Server {
             }
         }
 
-        // 필요시 게임 상태 초기화
+        // 게임 상태 초기화
         catchmindReady.remove(chatId);
+        chatAnswerMap.remove(chatId); // 정답 정보 삭제
 
         // 출제자 정보 정리
         chatDrawerMap.remove(chatId);
     }
-
 }
 
 class ServerThread extends Thread {
@@ -504,7 +551,7 @@ class ServerThread extends Thread {
 
             // 새로운 유저 입장 알림
             Server.broadcastUserJoin(clientName);
-            
+
             // 메시지를 계속 수신
             while (true) {
                 String messageType = is.readUTF();
@@ -571,22 +618,17 @@ class ServerThread extends Thread {
 
                     // 채팅방 메시지
                     case "CHAT_MESSAGE": {
-                        // 클라이언트: CHAT_MESSAGE -> chatId -> msgType(TEXT/IMAGE/VIDEO) -> 데이터
-                        String chatId = is.readUTF();
-                        String cmsgType = is.readUTF();
-                        if (cmsgType.equals("TEXT")) {
-                            String txt = is.readUTF();
-                            Server.broadcastChatMessage(chatId, "TEXT", userInfo.name, null, txt);
-                        } else if (cmsgType.equals("IMAGE")) {
+                        String chatId = is.readUTF(); // 채팅방 ID
+                        String msgType = is.readUTF(); // 메시지 타입(TEXT/IMAGE 등)
+
+                        if ("TEXT".equals(msgType)) {
+                            String txt = is.readUTF(); // 메시지 내용
+                            Server.broadcastChatMessage(chatId, msgType, userInfo.name, null, txt);
+                        } else if ("IMAGE".equals(msgType)) {
                             int len = is.readInt();
                             byte[] img = new byte[len];
                             is.readFully(img);
-                            Server.broadcastChatMessage(chatId, "IMAGE", userInfo.name, img, null);
-                        } else if (cmsgType.equals("VIDEO")) {
-                            int len = is.readInt();
-                            byte[] vid = new byte[len];
-                            is.readFully(vid);
-                            Server.broadcastChatMessage(chatId, "VIDEO", userInfo.name, vid, null);
+                            Server.broadcastChatMessage(chatId, msgType, userInfo.name, img, null);
                         }
                         break;
                     }
@@ -668,8 +710,7 @@ class ServerThread extends Thread {
                         String chatId = is.readUTF();
                         String attemptedAnswer = is.readUTF();
 
-                        // 정답 확인 (예시: 정답은 "사과")
-                        String correctAnswer = "사과"; // 실제로는 출제자에게 할당된 정답을 사용
+                        String correctAnswer = Server.chatAnswerMap.get(chatId);
                         if (attemptedAnswer.equalsIgnoreCase(correctAnswer)) {
                             Server.awardPoints(chatId, userInfo.name, false);
                             broadcastCorrectAnswer(chatId, userInfo.name);
@@ -704,7 +745,7 @@ class ServerThread extends Thread {
             }
         }
     }
-    
+
     private void sendUserListToClient(UserInfo requester) {
         try {
             List<UserInfo> allUsers = new ArrayList<>(Server.userMap.values());
@@ -808,7 +849,7 @@ class UserInfo {
 	DataOutputStream os;
 	DataInputStream is;
     int points;
-	
+
 	public UserInfo(String name, byte[] profileImageData, Socket socket, DataOutputStream os, DataInputStream is) {
 		this.name = name;
 		this.profileImageData = profileImageData;

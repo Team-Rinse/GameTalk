@@ -85,23 +85,29 @@ public class ClientSocket {
 	    }
 	    return userList;
 	}
-	
-	static public void sendTextMessage(String msg) {
-		if(msg == null) return;
+
+	static public void sendTextMessage(String chatId, String msg) {
+		if (msg == null) return;
 		try {
 			os.writeUTF("CHAT_MESSAGE");
+			os.writeUTF(chatId);
 			os.writeUTF("TEXT");
 			os.writeUTF(msg);
 			os.flush();
-		} catch (IOException e) { }
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
-	public static void sendImageMessage(String imagePath) {
+
+	public static void sendImageMessage(String chatId, byte[] imageData) {
 		try {
-			// 서버로 이미지 메시지 전송 요청
-			getDataOutputStream().writeUTF("IMAGE_MESSAGE"); // 메시지 타입 전송
-			getDataOutputStream().writeUTF(imagePath);       // 이미지 파일 경로 전송
-			getDataOutputStream().flush();
+			os.writeUTF("CHAT_MESSAGE");
+			os.writeUTF(chatId);
+			os.writeUTF("IMAGE"); // 이미지 타입 지정
+			os.writeInt(imageData.length);
+			os.write(imageData);
+			os.flush();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -227,48 +233,59 @@ public class ClientSocket {
 	                        updateFriendListOnUI();
 	                        break;
 	                    }
-	                    case "CHAT_CREATED": {
-	                    	// 서버에서 채팅방 생성 완료 알림
-	                    	String chatId = is.readUTF();
-	                    	int participantCount = is.readInt();
-	                    	List<String> participants = new ArrayList<>();
-	                    	for (int i = 0; i < participantCount; i++) {
-	                    		participants.add(is.readUTF());
-	                    	}
-	                    	
-	                    	String chatTitle = String.join(", ", participants);
-	                    	
-	                    	// UI 스레드에서 ChatRoom창 오픈
-	                    	SwingUtilities.invokeLater(() -> {
-	                    		ChatRoom chatRoom = new ChatRoom(chatId, participants);
-	                    		chatRoom.setSize(307, 613);
-	                    		chatRoom.setLocationRelativeTo(null);
-	                    		chatRoom.setVisible(true);
-	                    		
-	                    		if (ClientSocket.chatPanel != null) {
-	                                ClientSocket.chatPanel.addChatEntry(chatTitle, "");
-	                    		}
-	                    	});
-	                    	
-	                    	break;
-	                    }
-	                    case "CHAT_MESSAGE": {
-	                        // 채팅방 메시지 처리 로직
-	                        String chatId = is.readUTF();
-	                        String cmsgType = is.readUTF();
-	                        // 여기서 TEXT, IMAGE, VIDEO에 따라 처리
-	                        // 필요 시 UI 업데이트
-	                        String sender = is.readUTF();
-	                        String txt = is.readUTF();
-	                        SwingUtilities.invokeLater(() -> {
-	                            if (ClientSocket.chatPanel != null) {
-	                                // 여기서는 sender를 friendName으로, txt를 lastMessage로 표시
-	                                ClientSocket.chatPanel.updateLastMessage(sender, txt);
-	                            }
-	                        });
-	                        break;
-	                    }
-	                    // 그 외 TEXT, IMAGE, VIDEO 등 일반 브로드캐스트 메시지는 필요에 따라 처리
+						case "CHAT_CREATED": {
+							String chatId = is.readUTF();
+							int participantCount = is.readInt();
+							List<String> participants = new ArrayList<>();
+							for (int i = 0; i < participantCount; i++) {
+								participants.add(is.readUTF());
+							}
+
+							String chatTitle = String.join(", ", participants);
+
+							SwingUtilities.invokeLater(() -> {
+								ChatRoom chatRoom = new ChatRoom(chatId, participants);
+								chatRoom.setSize(307, 613);
+								chatRoom.setLocationRelativeTo(null);
+								chatRoom.setVisible(true);
+
+								// 생성한 채팅방을 ClientSocket에 등록
+								ClientSocket.setChatRoom(chatRoom);
+
+								if (ClientSocket.chatPanel != null) {
+									ClientSocket.chatPanel.addChatEntry(chatTitle, "");
+								}
+							});
+
+							break;
+						}
+						case "CHAT_MESSAGE": {
+							String chatId = is.readUTF(); // 채팅방 ID
+							String msgType = is.readUTF(); // 메시지 타입(TEXT, IMAGE 등)
+							String sender = is.readUTF(); // 보낸 사람
+
+							if ("TEXT".equals(msgType)) {
+								String msgContent = is.readUTF(); // 메시지 내용
+								SwingUtilities.invokeLater(() -> {
+									if (ClientSocket.chatRoom != null && ClientSocket.chatRoom.getChatId().equals(chatId)) {
+										ClientSocket.chatRoom.addOtherMessage(sender, msgContent); // 텍스트 메시지 표시
+									}
+								});
+							} else if ("IMAGE".equals(msgType)) {
+								int imageLength = is.readInt();
+								byte[] imageData = new byte[imageLength];
+								is.readFully(imageData); // 이미지 데이터 읽기
+
+								SwingUtilities.invokeLater(() -> {
+									if (ClientSocket.chatRoom != null && ClientSocket.chatRoom.getChatId().equals(chatId)) {
+										ClientSocket.chatRoom.addImageMessage(sender, imageData); // 이미지 메시지 표시
+									}
+								});
+							}
+							// 필요한 경우 VIDEO 등 다른 msgType 처리
+							break;
+						}
+						// 그 외 TEXT, IMAGE, VIDEO 등 일반 브로드캐스트 메시지는 필요에 따라 처리
 	                    case "TEXT": {
 	                        String message = is.readUTF();
 	                        

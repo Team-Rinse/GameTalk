@@ -1,4 +1,7 @@
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.event.ActionEvent;
@@ -190,7 +193,7 @@ public class ChatRoom extends JFrame {
                     String myMsg = messageInput.getText();
                     addMyMessage(myMsg);
                     messageInput.setText("");
-                    ClientSocket.sendTextMessage(myMsg);
+                    ClientSocket.sendTextMessage(chatId, myMsg);
                 }
             }
         });
@@ -229,7 +232,7 @@ public class ChatRoom extends JFrame {
     }
 
     // 다른 사람 메시지(왼쪽 정렬, 흰색 말풍선, 프로필 이미지)
-    private void addOtherMessage(String senderName, String text) {
+    void addOtherMessage(String senderName, String text) {
         JPanel msgPanel = new JPanel(new BorderLayout()) {
             @Override
             public Dimension getPreferredSize() {
@@ -297,8 +300,12 @@ public class ChatRoom extends JFrame {
             emojiButtonItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    addImageMessage("나", "/emoji/" + emojiFile); // 선택된 이모티콘 메시지로 추가
-                    ClientSocket.sendImageMessage("/emoji/" + emojiFile); // 서버로 이모티콘 메시지 전송
+                    byte[] imageBytes = null;
+                    try {
+                        imageBytes = loadImageAsByteArray("/emoji/" + emojiFile);
+                    } catch (IOException ex) {}
+                    addImageMessage("나", imageBytes); // 선택된 이모티콘 메시지로 추가
+                    ClientSocket.sendImageMessage(chatId,imageBytes); // 서버로 이모티콘 메시지 전송
                 }
             });
             emojiPanel.add(emojiButtonItem); // 버튼을 패널에 추가
@@ -317,56 +324,80 @@ public class ChatRoom extends JFrame {
         emojiPopup.show(emojiButton, 0, emojiButton.getHeight());
     }
 
+    private byte[] loadImageAsByteArray(String imagePath) throws IOException {
+        // 클래스 리소스에서 이미지를 읽음
+        InputStream is = getClass().getResourceAsStream(imagePath);
+        if (is == null) {
+            throw new IOException("Image file not found: " + imagePath);
+        }
 
-    // 이미지 메시지(일단 다른 사람 메시지 스타일)
-    private void addImageMessage(String senderName, String imagePath) {
+        // 바이트 배열로 변환
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int bytesRead;
+        while ((bytesRead = is.read(buffer)) != -1) {
+            baos.write(buffer, 0, bytesRead);
+        }
+        return baos.toByteArray();
+    }
+
+    // 이미지 메시지
+    void addImageMessage(String senderName, byte[] imageData) {
         JPanel msgPanel = new JPanel(new BorderLayout());
         msgPanel.setOpaque(false);
 
-        // 프로필 아이콘 생성 (기본 왼쪽 정렬)
-        JLabel profilePic = new JLabel();
-        ImageIcon profileIcon = new ImageIcon(TalkApp.class.getResource("/icon/profile.png"));
-        Image profileImage = profileIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
-        profilePic.setIcon(new ImageIcon(profileImage));
+        try {
+            // byte[]를 BufferedImage로 변환
+            ByteArrayInputStream bais = new ByteArrayInputStream(imageData);
+            BufferedImage bufferedImage = ImageIO.read(bais);
+            if (bufferedImage == null) {
+                throw new IOException("이미지 데이터를 읽을 수 없습니다.");
+            }
 
-        // 텍스트 패널 (송신자 이름과 이모티콘 포함)
-        JPanel textPanel = new JPanel();
-        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
-        textPanel.setOpaque(false);
+            ImageIcon imgIcon = new ImageIcon(bufferedImage);
+            Image img = imgIcon.getImage().getScaledInstance(100, 60, Image.SCALE_SMOOTH);
+            ImageIcon scaledIcon = new ImageIcon(img);
 
-        JLabel nameLabel = new JLabel(senderName);
-        nameLabel.setFont(new Font("Kakao", Font.PLAIN, 12));
-        textPanel.add(nameLabel);
+            JLabel imageLabel = new JLabel(scaledIcon);
+            imageLabel.setOpaque(true);
+            imageLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        // 이미지 라벨 생성
-        JLabel imageLabel = new JLabel();
-        ImageIcon imgIcon = new ImageIcon(TalkApp.class.getResource(imagePath));
-        Image img = imgIcon.getImage().getScaledInstance(100, 60, Image.SCALE_SMOOTH);
-        imageLabel.setIcon(new ImageIcon(img));
-        imageLabel.setOpaque(true);
-        imageLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+            if (senderName.equals("나")) {
+                // 내 메시지: 오른쪽 정렬, 노란색 배경
+                imageLabel.setBackground(new Color(255, 240, 140)); // 노란색
+                msgPanel.add(imageLabel, BorderLayout.EAST);
+            } else {
+                // 상대방 메시지: 왼쪽 정렬, 흰색 배경 + 프로필 이미지
+                JLabel profilePic = new JLabel();
+                ImageIcon profileIcon = new ImageIcon(getClass().getResource("/icon/profile.png"));
+                Image profileImage = profileIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
+                profilePic.setIcon(new ImageIcon(profileImage));
+                msgPanel.add(profilePic, BorderLayout.WEST);
 
-        // 송신자별 스타일 적용
-        if (senderName.equals("나")) {
-            // 내 메시지: 오른쪽 정렬, 노란색 배경
-            msgPanel.add(textPanel, BorderLayout.EAST); // 오른쪽 정렬
-            imageLabel.setBackground(new Color(255, 240, 140)); // 노란색
-        } else {
-            // 상대방 메시지: 왼쪽 정렬, 흰색 배경
-            msgPanel.add(profilePic, BorderLayout.WEST); // 프로필 왼쪽 정렬
-            msgPanel.add(textPanel, BorderLayout.CENTER); // 텍스트 중간 정렬
-            imageLabel.setBackground(Color.WHITE); // 흰색
+                JPanel textPanel = new JPanel();
+                textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+                textPanel.setOpaque(false);
+
+                JLabel nameLabel = new JLabel(senderName);
+                nameLabel.setFont(new Font("Kakao", Font.PLAIN, 12));
+                textPanel.add(nameLabel);
+
+                imageLabel.setBackground(Color.WHITE); // 흰색
+                textPanel.add(imageLabel);
+
+                msgPanel.add(textPanel, BorderLayout.CENTER);
+            }
+
+            // 메시지 패널 추가
+            messagePanel.add(msgPanel);
+            messagePanel.add(Box.createVerticalStrut(10)); // 간격 추가
+            messagePanel.revalidate();
+            messagePanel.repaint();
+        } catch (IOException e) {
+            e.printStackTrace();
+            // 오류 메시지 표시 또는 로그 기록
         }
-
-        textPanel.add(imageLabel);
-
-        // 메시지 패널 추가
-        messagePanel.add(msgPanel);
-        messagePanel.add(Box.createVerticalStrut(10)); // 간격 추가
-        messagePanel.revalidate();
-        messagePanel.repaint();
     }
-
 
     // 영상 메시지(썸네일로 표시, 비슷하게 이미지와 동일)
     private void addVideoMessage(String senderName, String videoThumbPath) {
