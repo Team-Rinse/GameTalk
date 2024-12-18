@@ -32,7 +32,7 @@ public class MainPanel extends JPanel {
         setBackground(Color.WHITE);
         setBounds(73, 0, 307, 613);
         setLayout(null);
-        
+
         Preferences prefs = Preferences.userNodeForPackage(MainPanel.class);
         String savedProfileImagePath = prefs.get("profileImagePath", null);
         String savedStatusMessage = prefs.get("statusMessage", "");
@@ -57,7 +57,7 @@ public class MainPanel extends JPanel {
             new MyProfile(MainPanel.this); // MainPanel 객체 전달
         });
         add(myProfileButton);
-        
+
         profilePicLabel = new JLabel(new ImageIcon(profileImage));
         profilePicLabel.setBounds(14, 40, 60, 60);
         add(profilePicLabel);
@@ -210,7 +210,7 @@ public class MainPanel extends JPanel {
         nameLabel.setText(newName);  // MainPanel에서 JLabel을 통해 이름을 업데이트합니다.
     }
 
- // 프로필 이미지를 업데이트하는 메서드
+    // 프로필 이미지를 업데이트하는 메서드
     public void updateProfileImage(Image newImage) {
         profilePicLabel.setIcon(new ImageIcon(newImage)); // MainPanel에서 JLabel을 통해 프로필 이미지를 업데이트합니다.
 
@@ -233,10 +233,10 @@ public class MainPanel extends JPanel {
     // 상태 메시지를 업데이트하는 메서드
     public void updateStatusMessage(String newMessage) {
         statusMessageLabel.setText(newMessage); // 상태 메시지 업데이트
-        
+
         Preferences prefs = Preferences.userNodeForPackage(MainPanel.class);
         prefs.put("statusMessage", newMessage); // 상태 메시지 저장
-        
+
         revalidate();
         repaint();
     }

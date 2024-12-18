@@ -1,3 +1,4 @@
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -26,7 +27,7 @@ public class ChatPanel extends JPanel {
         setBackground(Color.WHITE);
         setBounds(73, 0, 307, 613);
         setLayout(null);
-
+        
         JLabel lblNewLabel = new JLabel("채팅");
         lblNewLabel.setBounds(18, 6, 34, 35);
         lblNewLabel.setFont(new Font("Kakao", Font.PLAIN, 17));
@@ -49,29 +50,29 @@ public class ChatPanel extends JPanel {
     // 새로운 채팅 항목 추가 메서드
     public void addChatEntry(String friendName, String lastMessage) {
         int y = chatItems.size() * 80 + 5; // 각 항목당 높이를 80이라 가정
-
+        
         // 프로필 아이콘
         JButton myProfileButton = new JButton();
         ImageIcon profileIcon = new ImageIcon(TalkApp.class.getResource("/icon/profile.png"));
         Image profileImage = profileIcon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
         myProfileButton.setIcon(new ImageIcon(profileImage));
         myProfileButton.setBounds(1, y, 60, 60);
-        myProfileButton.setContentAreaFilled(false);
-        myProfileButton.setBorderPainted(false);
-        myProfileButton.setFocusPainted(false);
+        myProfileButton.setContentAreaFilled(false); 
+        myProfileButton.setBorderPainted(false);    
+        myProfileButton.setFocusPainted(false); 
         chatListPanel.add(myProfileButton);
-
+        
         JLabel friendNameLabel = new JLabel(friendName);
         friendNameLabel.setFont(new Font("Kakao", Font.BOLD, 13));
         friendNameLabel.setBounds(65, y + 12, 200, 16);
         chatListPanel.add(friendNameLabel);
-
+        
         JLabel lastMessageLabel = new JLabel(lastMessage);
         lastMessageLabel.setFont(new Font("Kakao", Font.PLAIN, 12));
         lastMessageLabel.setForeground(new Color(116, 116, 116));
         lastMessageLabel.setBounds(65, y + 32, 200, 16);
         chatListPanel.add(lastMessageLabel);
-
+        
         // 익명 클래스를 사용하여 ActionListener 추가
         ActionListener openChatRoomListener = new ActionListener() {
             @Override
@@ -97,18 +98,18 @@ public class ChatPanel extends JPanel {
                 openChatRoomListener.actionPerformed(null); // 버튼과 동일한 로직 실행
             }
         });
-
+        
         // chatItems 리스트에 관리용 객체 추가(필요시)
         chatItems.add(new ChatListItem(friendName, lastMessage, myProfileButton, friendNameLabel, lastMessageLabel));
 
         // 패널 크기 갱신
-        chatListPanel.setPreferredSize(new java.awt.Dimension(280, y + 80));
+        chatListPanel.setPreferredSize(new Dimension(280, y + 80));
         chatListPanel.revalidate();
         chatListPanel.repaint();
         revalidate();
         repaint();
     }
-
+    
     // 특정 채팅 친구의 마지막 메시지 업데이트 메서드(옵션)
     public void updateLastMessage(String friendName, String lastMessage) {
         for (ChatListItem item : chatItems) {
@@ -120,7 +121,7 @@ public class ChatPanel extends JPanel {
         // 만약 해당 채팅이 없으면 새로 추가할 수도 있음
         addChatEntry(friendName, lastMessage);
     }
-
+    
     public void removeChatEntry(String friendName) {
         ChatListItem toRemove = null;
 

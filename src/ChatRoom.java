@@ -44,7 +44,7 @@ public class ChatRoom extends JFrame {
         topBar.setBackground(new Color(0xCCDAE7));
         panel.add(topBar, BorderLayout.NORTH);
 
-        // 채팅방 이름 
+        // 채팅방 이름
         JLabel chatRoomTitle = new JLabel(users);
         chatRoomTitle.setFont(new Font("Kakao", Font.BOLD, 18));
         chatRoomTitle.setBounds(10, 10, 80, 40);
@@ -97,8 +97,11 @@ public class ChatRoom extends JFrame {
 
         // 하단 입력 영역
         JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.setPreferredSize(new Dimension(307, 80));
+        bottomPanel.setPreferredSize(new Dimension(307, 120));
         bottomPanel.setBackground(Color.WHITE);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10)); // 여백 추가
+        buttonPanel.setOpaque(false);
 
         messageInput = new JTextField();
         messageInput.setFont(new Font("Kakao", Font.PLAIN, 14));
@@ -120,24 +123,61 @@ public class ChatRoom extends JFrame {
                 }
             }
         });
-
         bottomPanel.add(messageInput, BorderLayout.CENTER);
-        
-     // 이모티콘 버튼 추가
-        JLabel emojiButton = new JLabel(new ImageIcon(getClass().getResource("/emoji/emo.png")));
+
+        // 이모티콘 버튼 추가
+        ImageIcon emojiIcon = new ImageIcon(getClass().getResource("/emoji/emo.png"));
+        Image emojiImg = emojiIcon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH);
+        JButton emojiButton = new JButton(new ImageIcon(emojiImg));
         emojiButton.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         emojiButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        emojiButton.addMouseListener(new MouseAdapter() {
+        emojiButton.addActionListener(new ActionListener() {
             @Override
-            public void mouseClicked(MouseEvent e) {
+            public void actionPerformed(ActionEvent e) {
                 showEmojiPopup(emojiButton);
             }
         });
+        buttonPanel.add(emojiButton);
 
-        bottomPanel.add(emojiButton, BorderLayout.WEST);
+        JButton gameButton = new JButton(new ImageIcon(getClass().getResource("/icon/game.png")));
+        gameButton.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        gameButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        gameButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JDialog dialog = new JDialog();
+                dialog.setLayout(null);
+                dialog.setSize(200, 200);
+                dialog.setVisible(true);
+
+                JButton racing = new JButton("RACING\nGAME");
+                racing.setFont(new Font("Dunggeunmo", Font.PLAIN, 20));
+                racing.setBounds(0, 0, 100, 200);
+                racing.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        ClientSocket.createRacingGameFrame(chatId);
+                    }
+                });
+                dialog.add(racing);
+
+                JButton drawing = new JButton("DRAWING\nGAME");
+                drawing.setFont(new Font("Dunggeunmo", Font.PLAIN, 20));
+                drawing.setBounds(100, 0, 100, 200);
+                drawing.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        ClientSocket.createDrawingGameFrame(chatId);
+                    }
+                });
+                dialog.add(drawing);
+            }
+        });
+        buttonPanel.add(gameButton, BorderLayout.WEST);
+        bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
 
         sendButton = new JButton("전송");
+        sendButton.setPreferredSize(new Dimension(100, 40));
         sendButton.setFont(new Font("Kakao", Font.PLAIN, 14));
         sendButton.setEnabled(true);
         sendButton.setBackground(Color.WHITE);
@@ -227,8 +267,8 @@ public class ChatRoom extends JFrame {
         messagePanel.revalidate();
         messagePanel.repaint();
     }
-    
-    private void showEmojiPopup(JLabel emojiButton) {
+
+    private void showEmojiPopup(JButton emojiButton) {
         // 팝업 패널과 스크롤바 추가
         JPanel emojiPanel = new JPanel(new GridLayout(4, 3, 5, 5)); // 4행 3열, 각 요소 간 간격 5px
         emojiPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5)); // 외곽 여백
@@ -236,15 +276,15 @@ public class ChatRoom extends JFrame {
         emojiPanel.setBackground(Color.WHITE);
 
         // 이모티콘 목록 로드
-        String[] emojiFiles = { 
-            "emo1.png", "emo2.png", "emo3.png", 
-            "emo4.png", "emo5.png", "emo6.png", 
-            "emo7.png", "emo8.png", "emo9.png", 
-            "emo10.png", "emo11.png", "emo12.png"
+        String[] emojiFiles = {
+                "emo1.png", "emo2.png", "emo3.png",
+                "emo4.png", "emo5.png", "emo6.png",
+                "emo7.png", "emo8.png", "emo9.png",
+                "emo10.png", "emo11.png", "emo12.png"
         };
 
         for (String emojiFile : emojiFiles) {
-        	ImageIcon originalIcon = new ImageIcon(getClass().getResource("/emoji/" + emojiFile));
+            ImageIcon originalIcon = new ImageIcon(getClass().getResource("/emoji/" + emojiFile));
             Image scaledImage = originalIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
             ImageIcon resizedIcon = new ImageIcon(scaledImage);
 

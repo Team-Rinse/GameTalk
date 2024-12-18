@@ -36,15 +36,15 @@ public class TalkApp extends JFrame {
         contentPanel.add(chatPanel, "Chat");
         contentPanel.add(optionPanel, "Option");
 
-        // 버튼 생성
+        // 버튼 생성 
         ImageIcon userIcon = new ImageIcon(TalkApp.class.getResource("/icon/user.png"));
         Image userImage = userIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
         JButton userButton = createButton(new ImageIcon(userImage), 15, 49);
         userButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                cardLayout.show(contentPanel, "Main");
-            }
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				cardLayout.show(contentPanel, "Main");
+			}
         });
         buttonPanel.add(userButton);
 
@@ -52,10 +52,10 @@ public class TalkApp extends JFrame {
         Image chatImage = chatIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
         JButton chatButton = createButton(new ImageIcon(chatImage), 15, 103);
         chatButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                cardLayout.show(contentPanel, "Chat");
-            }
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				cardLayout.show(contentPanel, "Chat");
+			}
         });
         buttonPanel.add(chatButton);
 
@@ -63,14 +63,15 @@ public class TalkApp extends JFrame {
         Image optionImage = optionIcon.getImage().getScaledInstance(30, 30, Image.SCALE_SMOOTH);
         JButton optionButton = createButton(new ImageIcon(optionImage), 15, 157);
         optionButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                cardLayout.show(contentPanel, "Option");
-            }
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				cardLayout.show(contentPanel, "Option");
+			}
         });
         buttonPanel.add(optionButton);
 
         ClientSocket.setChatPanel(chatPanel);
+        ClientSocket.setOptionPanel(optionPanel);
     }
 
     private JButton createButton(ImageIcon icon, int x, int y) {
