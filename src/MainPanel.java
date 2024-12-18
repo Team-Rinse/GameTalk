@@ -7,13 +7,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.prefs.Preferences;
-
 import javax.imageio.ImageIO;
 import javax.swing.*;
 
 public class MainPanel extends JPanel {
     private static final long serialVersionUID = 1L;
+    private MyProfile myProfile;
 
     public JLabel nameLabel;          // 이름을 표시할 JLabel
     public JLabel profilePicLabel;   // 프로필 이미지를 표시할 JLabel
@@ -33,17 +32,17 @@ public class MainPanel extends JPanel {
         setBounds(73, 0, 307, 613);
         setLayout(null);
 
-        Preferences prefs = Preferences.userNodeForPackage(MainPanel.class);
-        String savedProfileImagePath = prefs.get("profileImagePath", null);
-        String savedStatusMessage = prefs.get("statusMessage", "");
+//        Preferences prefs = Preferences.userNodeForPackage(MainPanel.class);
+//        String savedProfileImagePath = prefs.get("profileImagePath", null);
+//        String savedStatusMessage = prefs.get("statusMessage", "");
 
         // 초기 프로필 이미지 설정
         ImageIcon profileIcon;
-        if (savedProfileImagePath != null && !savedProfileImagePath.isEmpty()) {
-            profileIcon = new ImageIcon(savedProfileImagePath);
-        } else {
+//        if (savedProfileImagePath != null && !savedProfileImagePath.isEmpty()) {
+//            profileIcon = new ImageIcon(savedProfileImagePath);
+//        } else {
             profileIcon = new ImageIcon(TalkApp.class.getResource("/icon/profile.png"));
-        }
+//        }
         Image profileImage = profileIcon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
 
         JButton myProfileButton = new JButton();
@@ -69,15 +68,15 @@ public class MainPanel extends JPanel {
         add(nameLabel);
 
         // 상태 메시지를 표시할 JLabel을 생성합니다.
-        if (savedStatusMessage.isEmpty()) {
+//        if (savedStatusMessage.isEmpty()) {
             statusMessageLabel = new JLabel("상태 메시지를 입력하세요");
             statusMessageLabel.setFont(new Font("Kakao", Font.ITALIC, 12));
             statusMessageLabel.setForeground(Color.GRAY);
-        } else {
-            statusMessageLabel = new JLabel(savedStatusMessage);
-            statusMessageLabel.setFont(new Font("Kakao", Font.PLAIN, 12));
-            statusMessageLabel.setForeground(Color.BLACK); // 기존 메시지 색상 설정
-        }
+//        } else {
+//            statusMessageLabel = new JLabel(savedStatusMessage);
+//            statusMessageLabel.setFont(new Font("Kakao", Font.PLAIN, 12));
+//            statusMessageLabel.setForeground(Color.BLACK); // 기존 메시지 색상 설정
+//        }
         statusMessageLabel.setBounds(80, 60, 200, 16); // 상태 메시지 위치
         add(statusMessageLabel);
 
@@ -215,12 +214,12 @@ public class MainPanel extends JPanel {
         profilePicLabel.setIcon(new ImageIcon(newImage)); // MainPanel에서 JLabel을 통해 프로필 이미지를 업데이트합니다.
 
         // 이미지를 저장
-        Preferences prefs = Preferences.userNodeForPackage(MainPanel.class);
+//        Preferences prefs = Preferences.userNodeForPackage(MainPanel.class);
         try {
             File tempFile = new File("profile_temp.png");
             ImageIcon icon = new ImageIcon(newImage);
             ImageIO.write((BufferedImage) icon.getImage(), "png", tempFile);
-            prefs.put("profileImagePath", tempFile.getAbsolutePath());
+//            prefs.put("profileImagePath", tempFile.getAbsolutePath());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -234,8 +233,8 @@ public class MainPanel extends JPanel {
     public void updateStatusMessage(String newMessage) {
         statusMessageLabel.setText(newMessage); // 상태 메시지 업데이트
 
-        Preferences prefs = Preferences.userNodeForPackage(MainPanel.class);
-        prefs.put("statusMessage", newMessage); // 상태 메시지 저장
+//        Preferences prefs = Preferences.userNodeForPackage(MainPanel.class);
+//        prefs.put("statusMessage", newMessage); // 상태 메시지 저장
 
         revalidate();
         repaint();
