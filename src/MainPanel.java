@@ -1,13 +1,10 @@
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Image;
-import java.awt.image.BufferedImage;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.DataOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import javax.imageio.ImageIO;
 import javax.swing.*;
 
 public class MainPanel extends JPanel {
@@ -15,7 +12,7 @@ public class MainPanel extends JPanel {
     private MyProfile myProfile;
 
     public JLabel nameLabel;          // 이름을 표시할 JLabel
-    public JLabel profilePicLabel;   // 프로필 이미지를 표시할 JLabel
+    public JLabel profilePicLabel;    // 프로필 이미지를 표시할 JLabel
     public JLabel statusMessageLabel; // 상태 메시지를 표시할 JLabel
 
     private JPanel friendListPanel;  // 친구 리스트를 보여줄 패널
@@ -32,33 +29,18 @@ public class MainPanel extends JPanel {
         setBounds(73, 0, 307, 613);
         setLayout(null);
 
-//        Preferences prefs = Preferences.userNodeForPackage(MainPanel.class);
-//        String savedProfileImagePath = prefs.get("profileImagePath", null);
-//        String savedStatusMessage = prefs.get("statusMessage", "");
-
         // 초기 프로필 이미지 설정
-        ImageIcon profileIcon;
-//        if (savedProfileImagePath != null && !savedProfileImagePath.isEmpty()) {
-//            profileIcon = new ImageIcon(savedProfileImagePath);
-//        } else {
-        profileIcon = new ImageIcon(TalkApp.class.getResource("/icon/profile.png"));
-//        }
+        ImageIcon profileIcon = new ImageIcon(TalkApp.class.getResource("/icon/profile.png"));
         Image profileImage = profileIcon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
-
-        JButton myProfileButton = new JButton();
-        myProfileButton.setIcon(new ImageIcon(profileImage));
-        myProfileButton.setBounds(14, 40, 60, 60);
-        myProfileButton.setContentAreaFilled(false);
-        myProfileButton.setBorderPainted(false);
-        myProfileButton.setFocusPainted(false);
-        myProfileButton.addActionListener(e -> {
-            // MyProfile을 호출할 때 MainPanel을 전달
-            new MyProfile(MainPanel.this); // MainPanel 객체 전달
-        });
-        add(myProfileButton);
 
         profilePicLabel = new JLabel(new ImageIcon(profileImage));
         profilePicLabel.setBounds(14, 40, 60, 60);
+        profilePicLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                new MyProfile(MainPanel.this);
+            }
+        });
         add(profilePicLabel);
 
         // 이름을 표시할 JLabel을 생성합니다.
@@ -68,21 +50,11 @@ public class MainPanel extends JPanel {
         add(nameLabel);
 
         // 상태 메시지를 표시할 JLabel을 생성합니다.
-//        if (savedStatusMessage.isEmpty()) {
         statusMessageLabel = new JLabel("상태 메시지를 입력하세요");
         statusMessageLabel.setFont(new Font("Kakao", Font.ITALIC, 12));
         statusMessageLabel.setForeground(Color.GRAY);
-//        } else {
-//            statusMessageLabel = new JLabel(savedStatusMessage);
-//            statusMessageLabel.setFont(new Font("Kakao", Font.PLAIN, 12));
-//            statusMessageLabel.setForeground(Color.BLACK); // 기존 메시지 색상 설정
-//        }
         statusMessageLabel.setBounds(80, 60, 200, 16); // 상태 메시지 위치
         add(statusMessageLabel);
-
-        profilePicLabel = new JLabel();
-        profilePicLabel.setBounds(14, 40, 60, 60);
-        add(profilePicLabel);
 
         JLabel line = new JLabel("");
         line.setBackground(new Color(240, 240, 240));
@@ -136,7 +108,6 @@ public class MainPanel extends JPanel {
             showingCheckBoxes = false;
             updateFriends(ClientSocket.currentUsers);
         });
-        createChatButton.setVisible(false);
         add(createChatButton);
 
         JLabel friendListLabel = new JLabel("친구");
@@ -168,11 +139,19 @@ public class MainPanel extends JPanel {
                 continue;
             }
 
-            // 아이콘 버튼(친구 프로필)
-            JButton friendButton = new JButton();
-            ImageIcon friendIcon = new ImageIcon(TalkApp.class.getResource("/icon/profile.png"));
-            Image friendImg = friendIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
-            friendButton.setIcon(new ImageIcon(friendImg));
+            // 프로필 이미지 가져오기
+            byte[] profileData = ClientSocket.userProfiles.get(friend);
+            Image friendImg;
+            if (profileData != null) {
+                friendImg = Toolkit.getDefaultToolkit().createImage(profileData);
+                friendImg = friendImg.getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+            } else {
+                ImageIcon defaultIcon = new ImageIcon(TalkApp.class.getResource("/icon/profile.png"));
+                friendImg = defaultIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+            }
+
+            // 프로필 아이콘 버튼
+            JButton friendButton = new JButton(new ImageIcon(friendImg));
             friendButton.setFocusPainted(false);
             friendButton.setContentAreaFilled(false);
             friendButton.setBorderPainted(false);
@@ -206,23 +185,37 @@ public class MainPanel extends JPanel {
 
     // 이름을 업데이트하는 메서드
     public void setUserName(String newName) {
-        nameLabel.setText(newName);  // MainPanel에서 JLabel을 통해 이름을 업데이트합니다.
+        if (newName == null || newName.isEmpty()) return;
+
+        nameLabel.setText(newName);  // 이름 UI 업데이트
     }
 
-    // 프로필 이미지를 업데이트하는 메서드
+    // 프로필 이미지를 업데이트하는 메서드 (서버에서 받은 업데이트)
     public void updateProfileImage(Image newImage) {
-        profilePicLabel.setIcon(new ImageIcon(newImage)); // MainPanel에서 JLabel을 통해 프로필 이미지를 업데이트합니다.
+        if (newImage == null) return;
 
-        // 이미지를 저장
-//        Preferences prefs = Preferences.userNodeForPackage(MainPanel.class);
-        try {
-            File tempFile = new File("profile_temp.png");
-            ImageIcon icon = new ImageIcon(newImage);
-            ImageIO.write((BufferedImage) icon.getImage(), "png", tempFile);
-//            prefs.put("profileImagePath", tempFile.getAbsolutePath());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        // 원하는 크기
+        int targetWidth = profilePicLabel.getWidth();
+        int targetHeight = profilePicLabel.getHeight();
+
+        // 원본 이미지 크기
+        int originalWidth = newImage.getWidth(null);
+        int originalHeight = newImage.getHeight(null);
+
+        // 크기 조정 비율 계산
+        double widthRatio = (double) targetWidth / originalWidth;
+        double heightRatio = (double) targetHeight / originalHeight;
+        double scale = Math.min(widthRatio, heightRatio);
+
+        // 조정된 크기 계산
+        int newWidth = (int) (originalWidth * scale);
+        int newHeight = (int) (originalHeight * scale);
+
+        // 이미지 크기 조정
+        Image scaledImage = newImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+
+        // 프로필 이미지 UI 업데이트
+        profilePicLabel.setIcon(new ImageIcon(scaledImage));
 
         revalidate();
         repaint();
@@ -231,10 +224,9 @@ public class MainPanel extends JPanel {
 
     // 상태 메시지를 업데이트하는 메서드
     public void updateStatusMessage(String newMessage) {
-        statusMessageLabel.setText(newMessage); // 상태 메시지 업데이트
+        if (newMessage == null || newMessage.isEmpty()) return;
 
-//        Preferences prefs = Preferences.userNodeForPackage(MainPanel.class);
-//        prefs.put("statusMessage", newMessage); // 상태 메시지 저장
+        statusMessageLabel.setText(newMessage); // 상태 메시지 업데이트
 
         revalidate();
         repaint();

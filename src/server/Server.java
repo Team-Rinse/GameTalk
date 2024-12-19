@@ -36,6 +36,25 @@ public class Server {
         }
     }
 
+    public static void broadcastProfileUpdate(UserInfo user) {
+        for (UserInfo ui : userMap.values()) {
+            try {
+                ui.os.writeUTF("PROFILE_UPDATED");
+                ui.os.writeUTF(user.name);
+                if (user.profileImageData != null) {
+                    ui.os.writeInt(user.profileImageData.length);
+                    ui.os.write(user.profileImageData);
+                } else {
+                    ui.os.writeInt(0);
+                }
+                ui.os.writeUTF(user.statusMessage == null ? "" : user.statusMessage);
+                ui.os.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     // 특정 채팅방에 메시지 방송
     public static void broadcastChatMessage(String chatId, String msgType, String sender, byte[] data, String text) {
         List<UserInfo> participants = chatRooms.get(chatId);
@@ -153,7 +172,7 @@ public class Server {
         Map<String, Integer> playerPositions = racePositions.get(chatId);
         if (playerPositions == null) return;
 
-        int newPosition = playerPositions.get(playerName) + 1;
+        int newPosition = playerPositions.get(playerName) + 3;
         playerPositions.put(playerName, newPosition);
         broadcastPlayerPosition(chatId, playerName, newPosition);
 
@@ -300,13 +319,13 @@ public class Server {
 
     // 캐치마인드 단어 목록 로드 메서드
     private static void loadCatchmindWords() {
-        File file = new File("../text/catchmind_words.txt");
-        if (!file.exists()) {
-            System.err.println("Catchmind words file not found: text/catchmind_words.txt");
+        InputStream is = Server.class.getClassLoader().getResourceAsStream("text/catchmind_words.txt");
+        if (is == null) {
+            System.err.println("Catchmind words file not found in resources: text/catchmind_words.txt");
             return;
         }
 
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(is))) {
             String line;
             catchmindWords.clear(); // 기존 단어 목록 초기화
             while ((line = br.readLine()) != null) {
@@ -369,19 +388,6 @@ public class Server {
                     }
                 }
             }
-
-            // 1분 타이머 설정
-            new Thread(() -> {
-                try {
-                    Thread.sleep(60000); // 60초 대기
-                    // 타이머 종료 후 포인트 부여
-                    Server.awardPoints(chatId, drawer.name, true);
-                    // 게임 종료 알림
-                    Server.endCatchmindGame(chatId);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }).start();
         }
     }
 
@@ -488,7 +494,7 @@ public class Server {
     }
 
     // 출제자 이름 가져오기
-    private static String getDrawerName(String chatId) {
+    static String getDrawerName(String chatId) {
         return chatDrawerMap.get(chatId);
     }
 
@@ -504,7 +510,7 @@ public class Server {
     }
 
     // 게임 종료 처리
-    private static void endCatchmindGame(String chatId) {
+    static void endCatchmindGame(String chatId) {
         // 게임 종료 메시지를 모든 참가자에게 전송
         List<UserInfo> participants = chatRooms.get(chatId);
         if (participants == null) return;
@@ -544,7 +550,7 @@ class ServerThread extends Thread {
     public void run() {
         try {
             String clientName = is.readUTF();
-            userInfo = new UserInfo(clientName, null, socket, os, is);
+            userInfo = new UserInfo(clientName, null, "", socket, os, is);
 
             Server.userMap.put(socket, userInfo);
             System.out.println(clientName + "님이 입장했습니다.");
@@ -583,7 +589,6 @@ class ServerThread extends Thread {
                     }
                     // 프로필 업데이트 명령
                     case "UPDATE_PROFILE": {
-                        // 클라이언트: UPDATE_PROFILE -> 새이름 -> int 이미지길이 -> 이미지데이터
                         String newName = is.readUTF();
                         int imgLen = is.readInt();
                         byte[] imgData = null;
@@ -591,8 +596,14 @@ class ServerThread extends Thread {
                             imgData = new byte[imgLen];
                             is.readFully(imgData);
                         }
+                        String newStatusMessage = is.readUTF(); // 상태메시지 수신
+
                         userInfo.name = newName;
                         userInfo.profileImageData = imgData;
+                        userInfo.statusMessage = newStatusMessage;
+
+                        // 모든 사용자에게 프로필 업데이트 알림
+                        Server.broadcastProfileUpdate(userInfo);
                         break;
                     }
 
@@ -716,6 +727,18 @@ class ServerThread extends Thread {
                             broadcastCorrectAnswer(chatId, userInfo.name);
                         } else {
                             System.out.println(userInfo.name + "님이 틀린 답: " + attemptedAnswer);
+                        }
+                        break;
+                    }
+                    case "CATCHMIND_TIME_UP": {
+                        String chatId = is.readUTF();
+                        System.out.println("CATCHMIND_TIME_UP received for chatId: " + chatId);
+                        String drawerName = Server.getDrawerName(chatId);
+                        if (drawerName != null) {
+                            Server.awardPoints(chatId, drawerName, true);
+                            Server.endCatchmindGame(chatId);
+                        } else {
+                            System.err.println("Drawer not found for chatId: " + chatId);
                         }
                         break;
                     }
@@ -845,14 +868,16 @@ class ServerThread extends Thread {
 class UserInfo {
 	String name;
 	byte[] profileImageData;
+    String statusMessage;
 	Socket socket;
 	DataOutputStream os;
 	DataInputStream is;
     int points;
 
-	public UserInfo(String name, byte[] profileImageData, Socket socket, DataOutputStream os, DataInputStream is) {
+	public UserInfo(String name, byte[] profileImageData, String statusMessage, Socket socket, DataOutputStream os, DataInputStream is) {
 		this.name = name;
 		this.profileImageData = profileImageData;
+        this.statusMessage = statusMessage;
 		this.socket = socket;
 		this.os = os;
 		this.is = is;

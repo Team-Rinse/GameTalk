@@ -1,3 +1,4 @@
+import java.awt.*;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,9 +15,11 @@ public class ClientSocket {
 	private static DataOutputStream os;
 	private static DataInputStream is;
 	static List<String> currentUsers = new ArrayList<>();
+	static HashMap<String, byte[]> userProfiles = new HashMap<>();
+	static HashMap<String, String> userStatusMessages = new HashMap<>();
 	private static MainPanel mainPanel;
 	static ChatPanel chatPanel;
-	private static OptionPanel optionPanel;
+	static OptionPanel optionPanel;
 	private static ChatRoom chatRoom;
 	private static RacingGameFrame racingGameFrame;
 	private static DrawingGameFrame drawingGameFrame;
@@ -84,6 +87,23 @@ public class ClientSocket {
 	        e.printStackTrace();
 	    }
 	    return userList;
+	}
+
+	public static void updateProfile(String newName, byte[] profileImageData, String statusMessage) {
+		try {
+			os.writeUTF("UPDATE_PROFILE");
+			os.writeUTF(newName);
+			if (profileImageData != null) {
+				os.writeInt(profileImageData.length);
+				os.write(profileImageData);
+			} else {
+				os.writeInt(0);
+			}
+			os.writeUTF(statusMessage == null ? "" : statusMessage);
+			os.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	static public void sendTextMessage(String chatId, String msg) {
@@ -196,12 +216,23 @@ public class ClientSocket {
 		}
 	}
 
+	public static void sendCatchmindTimeUp(String chatId) {
+		try {
+			os.writeUTF("CATCHMIND_TIME_UP");
+			os.writeUTF(chatId);
+			os.flush();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	static class ClientThread extends Thread {
 		@Override
 	    public void run() {
 	        try {
 	            while (true) {
 	                String messageType = is.readUTF();
+
 	                switch (messageType) {
 	                    case "USER_JOIN": {
 	                        String userName = is.readUTF();
@@ -233,6 +264,49 @@ public class ClientSocket {
 	                        updateFriendListOnUI();
 	                        break;
 	                    }
+						// ClientThread 내부
+						case "PROFILE_UPDATED": {
+							String updatedName = is.readUTF();
+							int imgLen = is.readInt();
+							byte[] imgData = null;
+							if (imgLen > 0) {
+								imgData = new byte[imgLen];
+								is.readFully(imgData);
+							}
+							String updatedStatus = is.readUTF();
+
+							// userProfiles, userStatusMessages 맵 업데이트
+							userProfiles.put(updatedName, imgData);
+							userStatusMessages.put(updatedName, updatedStatus);
+
+							// 만약 updatedName이 본인이면 MainPanel에 반영
+							if (updatedName.equals(ClientSocket.name)) {
+								if (mainPanel != null) {
+									// 이름, 상태메시지, 프로필 이미지 업데이트
+									mainPanel.setUserName(updatedName);
+									if (imgData != null) {
+										Image profileImg = Toolkit.getDefaultToolkit().createImage(imgData);
+										mainPanel.updateProfileImage(profileImg);
+									}
+									mainPanel.updateStatusMessage(updatedStatus);
+								}
+							}
+
+							// 모든 채팅방의 프로필 이미지 갱신
+							if (chatPanel != null) {
+								SwingUtilities.invokeLater(() -> {
+									for (ChatPanel.ChatListItem item : chatPanel.chatItems) {
+										if (item.participants.contains(updatedName)) {
+											item.setProfileImages(); // 프로필 이미지 재설정 메서드 필요
+										}
+									}
+									chatPanel.chatListPanel.revalidate();
+									chatPanel.chatListPanel.repaint();
+								});
+							}
+
+							break;
+						}
 						case "CHAT_CREATED": {
 							String chatId = is.readUTF();
 							int participantCount = is.readInt();
@@ -253,12 +327,13 @@ public class ClientSocket {
 								ClientSocket.setChatRoom(chatRoom);
 
 								if (ClientSocket.chatPanel != null) {
-									ClientSocket.chatPanel.addChatEntry(chatTitle, "");
+									ClientSocket.chatPanel.addChatEntry(chatTitle, participants, "");
 								}
 							});
 
 							break;
 						}
+						// ClientThread 내 "CHAT_MESSAGE" 처리 부분
 						case "CHAT_MESSAGE": {
 							String chatId = is.readUTF(); // 채팅방 ID
 							String msgType = is.readUTF(); // 메시지 타입(TEXT, IMAGE 등)
@@ -268,7 +343,10 @@ public class ClientSocket {
 								String msgContent = is.readUTF(); // 메시지 내용
 								SwingUtilities.invokeLater(() -> {
 									if (ClientSocket.chatRoom != null && ClientSocket.chatRoom.getChatId().equals(chatId)) {
-										ClientSocket.chatRoom.addOtherMessage(sender, msgContent); // 텍스트 메시지 표시
+										// 본인이 보낸 메시지는 이미 addMyMessage로 표시되었으므로 다시 표시하지 않음
+										if (!sender.equals(ClientSocket.name)) {
+											ClientSocket.chatRoom.addOtherMessage(sender, msgContent);
+										}
 									}
 								});
 							} else if ("IMAGE".equals(msgType)) {
@@ -278,14 +356,15 @@ public class ClientSocket {
 
 								SwingUtilities.invokeLater(() -> {
 									if (ClientSocket.chatRoom != null && ClientSocket.chatRoom.getChatId().equals(chatId)) {
-										ClientSocket.chatRoom.addImageMessage(sender, imageData); // 이미지 메시지 표시
+										// 본인이 보낸 이미지일 경우 이미 addImageMessage("나", ...) 호출됨, 중복 표시 방지
+										if (!sender.equals(ClientSocket.name)) {
+											ClientSocket.chatRoom.addImageMessage(sender, imageData);
+										}
 									}
 								});
 							}
-							// 필요한 경우 VIDEO 등 다른 msgType 처리
 							break;
 						}
-						// 그 외 TEXT, IMAGE, VIDEO 등 일반 브로드캐스트 메시지는 필요에 따라 처리
 	                    case "TEXT": {
 	                        String message = is.readUTF();
 	                        
@@ -391,8 +470,8 @@ public class ClientSocket {
 								readinessMap.put(playerName, ready);
 							}
 							SwingUtilities.invokeLater(() -> {
-								if (drawingGameFrame != null) {
-									drawingGameFrame.updateReadyStatus(readinessMap);
+								if (ClientSocket.drawingGameFrame != null && ClientSocket.drawingGameFrame.getChatId().equals(chatId)) {
+									ClientSocket.drawingGameFrame.updateReadyStatus(readinessMap);
 								}
 							});
 							break;
@@ -445,7 +524,17 @@ public class ClientSocket {
 							String chatId = is.readUTF();
 							String winnerName = is.readUTF();
 							SwingUtilities.invokeLater(() -> {
-								JOptionPane.showMessageDialog(null, winnerName + "님이 정답을 맞췄습니다!");
+								int result = JOptionPane.showConfirmDialog(
+										drawingGameFrame,
+										winnerName+ "님이 정답을 맞췄습니다!",
+										"정답!",
+										JOptionPane.DEFAULT_OPTION,
+										JOptionPane.INFORMATION_MESSAGE
+								);
+
+								if (result == JOptionPane.CLOSED_OPTION || result == JOptionPane.OK_OPTION) {
+									drawingGameFrame.dispose();
+								}
 							});
 							break;
 						}

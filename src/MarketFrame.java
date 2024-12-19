@@ -71,7 +71,7 @@ public class MarketFrame extends JFrame {
                         JOptionPane.showMessageDialog(null, "구매 완료!");
                         updatePointLabel();
                         optionPanel.updatePoint(point);
-                        optionPanel.addPurchasedEmoji(productButton.getName());
+                        optionPanel.addPurchasedEmoji(productButton.getName(), 1);
                     } else {
                         JOptionPane.showMessageDialog(null, "포인트가 부족합니다.");
                     }

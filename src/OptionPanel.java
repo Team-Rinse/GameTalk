@@ -8,9 +8,9 @@ import javax.swing.*;
 public class OptionPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;
-    private int point = 0;
+    private int point = 100900;
     private JLabel coinLabel;
-    private HashMap<String, Integer> purchasedEmojis;
+    HashMap<String, Integer> purchasedEmojis;
 
     public OptionPanel() {
         setBackground(Color.WHITE);
@@ -68,8 +68,9 @@ public class OptionPanel extends JPanel {
         coinLabel.setText(point + " pt");
     }
 
-    public void addPurchasedEmoji(String emojiName) {
-        purchasedEmojis.put(emojiName, purchasedEmojis.getOrDefault(emojiName, 0) + 1);
+    public void addPurchasedEmoji(String emojiName, int delta) {
+        int currentCount = purchasedEmojis.getOrDefault(emojiName, 0);
+        purchasedEmojis.put(emojiName, Math.max(currentCount + delta, 0)); // 음수 방지
     }
 
     class StorageDialog extends JDialog {

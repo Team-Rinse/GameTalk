@@ -28,9 +28,6 @@ public class DrawingGameFrame extends BaseGameFrame {
     public DrawingGameFrame(String chatId) {
         super("Mini Catchmind", chatId);
         this.chatId = chatId;
-        super.readyPanel.setBackground(backgroundColor);
-        super.buttonPanel.setBackground(backgroundColor);
-        super.playerGridPanel.setBackground(backgroundColor);
         setVisible(true);
     }
 
@@ -169,17 +166,28 @@ public class DrawingGameFrame extends BaseGameFrame {
 
     // 게임 타이머 시작
     private void startTimer() {
-        gameTimer = new Timer(1000, e->{
+        gameTimer = new Timer(1000, e -> {
             remainingTime--;
             timerLabel.setText("00:" + remainingTime);
-            if(remainingTime <= 0) {
+            if (remainingTime <= 0) {
                 gameTimer.stop();
-                // 시간 만료 시 처리 로직 (서버에 알림, 게임 종료 등)
-                // ClientSocket.sendTimeOver(chatId);
+                ClientSocket.sendCatchmindTimeUp(chatId);
+                int result = JOptionPane.showConfirmDialog(
+                        this,
+                        "시간이 초과되었습니다. 출제자에게 포인트가 부여됩니다.",
+                        "시간 초과",
+                        JOptionPane.DEFAULT_OPTION,
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+
+                if (result == JOptionPane.CLOSED_OPTION || result == JOptionPane.OK_OPTION) {
+                    dispose(); // 현재 창 닫기
+                }
             }
         });
         gameTimer.start();
     }
+
 
     // 서버에서 DRAWER/VIEW_ONLY 정보 받으면 호출
     public void setMode(String mode) {

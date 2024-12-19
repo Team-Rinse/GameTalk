@@ -1,9 +1,12 @@
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.LineBorder;
-
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
 import java.util.prefs.Preferences;
 
 public class MyProfile extends JFrame {
@@ -71,8 +74,12 @@ public class MyProfile extends JFrame {
                 nameField.setEditable(!nameField.isEditable());
                 if (!nameField.isEditable()) {
                     nameField.setBackground(Color.WHITE);
-                    mainPanel.setUserName(nameField.getText()); // 이름 변경 후 MainPanel에 반영
-                    prefs.put("userName", nameField.getText()); // 이름 저장
+                    String newName = nameField.getText();
+                    mainPanel.setUserName(newName); // 이름 변경 후 MainPanel에 반영
+
+                    // 서버로 업데이트 요청
+                    ClientSocket.updateProfile(newName, getCurrentProfileImageBytes(), statusMessageField.getText());
+
                 } else {
                     nameField.setBackground(new Color(240, 240, 240));
                     nameField.requestFocus();
@@ -97,7 +104,11 @@ public class MyProfile extends JFrame {
                 if (!statusMessageField.isEditable()) {
                     statusMessageField.setBackground(Color.WHITE);
                     String newStatusMessage = statusMessageField.getText();
-                    prefs.put("statusMessage", newStatusMessage); // 상태 메시지 저장
+
+                    // 서버로 업데이트 요청
+                    ClientSocket.updateProfile(nameField.getText(), getCurrentProfileImageBytes(), newStatusMessage);
+
+                    prefs.put("statusMessage", newStatusMessage); // 로컬 저장
                     mainPanel.updateStatusMessage(newStatusMessage); // MainPanel에 반영
                 } else {
                     statusMessageField.setBackground(new Color(240, 240, 240));
@@ -122,13 +133,56 @@ public class MyProfile extends JFrame {
         int result = fileChooser.showOpenDialog(this);
         if (result == JFileChooser.APPROVE_OPTION) {
             File selectedFile = fileChooser.getSelectedFile();
-            ImageIcon newProfileIcon = new ImageIcon(selectedFile.getPath());
-            Image newProfileImage = newProfileIcon.getImage().getScaledInstance(90, 90, Image.SCALE_SMOOTH);
-            profilePic.setIcon(new ImageIcon(newProfileImage));
 
-            Preferences prefs = Preferences.userNodeForPackage(MyProfile.class);
-            prefs.put("profileImagePath", selectedFile.getPath()); // 선택한 이미지 경로를 Preferences에 저장
-            mainPanel.updateProfileImage(newProfileImage); // MainPanel에 반영
+            try {
+                Image newProfileImage = ImageIO.read(selectedFile).getScaledInstance(90, 90, Image.SCALE_SMOOTH);
+                profilePic.setIcon(new ImageIcon(newProfileImage));
+
+                // 이미지 파일을 바이트 배열로 변환
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ImageIO.write(ImageIO.read(selectedFile), "png", baos);
+                byte[] imageBytes = baos.toByteArray();
+
+                // 서버로 프로필 업데이트 전송
+                ClientSocket.updateProfile(nameField.getText(), imageBytes, statusMessageField.getText());
+
+                // 로컬 저장 (선택 사항)
+                prefs.put("profileImagePath", selectedFile.getPath());
+                mainPanel.updateProfileImage(newProfileImage); // MainPanel에 반영
+
+            } catch (IOException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "이미지 로드 실패", "오류", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private byte[] getCurrentProfileImageBytes() {
+        try {
+            ImageIcon icon = (ImageIcon) profilePic.getIcon();
+            if (icon == null) {
+                return null; // 아이콘이 없는 경우 null 반환
+            }
+
+            Image img = icon.getImage();
+
+            // 이미지를 BufferedImage로 변환
+            BufferedImage bufferedImage = new BufferedImage(
+                    img.getWidth(null),
+                    img.getHeight(null),
+                    BufferedImage.TYPE_INT_ARGB
+            );
+            Graphics2D g2d = bufferedImage.createGraphics();
+            g2d.drawImage(img, 0, 0, null);
+            g2d.dispose();
+
+            // BufferedImage를 바이트 배열로 변환
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ImageIO.write(bufferedImage, "png", baos);
+            return baos.toByteArray();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null; // 변환 실패 시 null 반환
         }
     }
 }

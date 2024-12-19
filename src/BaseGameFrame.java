@@ -84,4 +84,6 @@ public abstract class BaseGameFrame extends JFrame {
             }
         }
     }
+
+    void closeWindow() {dispose();}
 }
