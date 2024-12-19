@@ -292,51 +292,97 @@ public class ChatRoom extends JFrame {
     }
 
     private void showEmojiPopup(JButton emojiButton) {
-        JPanel emojiPanel = new JPanel(new GridLayout(4, 3, 5, 5));
-        emojiPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        emojiPanel.setOpaque(true);
-        emojiPanel.setBackground(Color.WHITE);
+        JDialog emojiDialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(emojiButton), "이모티콘 선택", true);
+        emojiDialog.setSize(300, 380);
+        emojiDialog.setResizable(false);
+        emojiDialog.setUndecorated(true);
 
-        // OptionPanel에서 구매한 이모티콘만 표시
+        // 이모티콘 선택 창의 위치를 emojiButton 근처로 설정
+        Point buttonLocation = emojiButton.getLocationOnScreen();
+        int dialogX = buttonLocation.x + emojiButton.getWidth() / 2 - 150; // 중앙 정렬
+        int dialogY = buttonLocation.y - 380; // 버튼 위에 표시
+        emojiDialog.setLocation(dialogX, dialogY);
+
+        emojiDialog.getContentPane().setBackground(new Color(245, 245, 245));
+        emojiDialog.setLayout(null);
+
+        JLabel label = new JLabel("이모티콘 선택", SwingConstants.CENTER);
+        label.setFont(new Font("Kakao", Font.PLAIN, 15));
+        label.setBounds(0, 10, 300, 30);
+        emojiDialog.add(label);
+
+        JPanel scrollPanel = new JPanel(new GridLayout(0, 2, 10, 10)); // 한 줄에 2개씩, 간격 10
+        scrollPanel.setBackground(new Color(245, 245, 245));
+
         OptionPanel optionPanel = ClientSocket.optionPanel; // OptionPanel 참조
         if (optionPanel == null) return;
 
         for (Map.Entry<String, Integer> entry : optionPanel.purchasedEmojis.entrySet()) {
             String emojiName = entry.getKey();
             int count = entry.getValue();
+
             if (count <= 0) continue; // 재고 없는 경우 제외
 
+            // 이모티콘 이미지 버튼 생성
             ImageIcon originalIcon = new ImageIcon(getClass().getResource("/emoji/" + emojiName + ".png"));
-            Image scaledImage = originalIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+            Image scaledImage = originalIcon.getImage().getScaledInstance(70, 70, Image.SCALE_SMOOTH);
             ImageIcon resizedIcon = new ImageIcon(scaledImage);
 
             JButton emojiButtonItem = new JButton(resizedIcon);
-            emojiButtonItem.setPreferredSize(new Dimension(50, 50));
+            emojiButtonItem.setPreferredSize(new Dimension(70, 70));
             emojiButtonItem.setBorderPainted(false);
             emojiButtonItem.setContentAreaFilled(false);
             emojiButtonItem.setFocusPainted(false);
+            emojiButtonItem.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+            // 이모티콘 클릭 시 전송 및 재고 감소
             emojiButtonItem.addActionListener(e -> {
                 try {
-                    // 전송 후 갯수 감소
+                    // 이모티콘 전송 후 재고 감소
                     optionPanel.addPurchasedEmoji(emojiName, -1);
                     byte[] imageBytes = loadImageAsByteArray("/emoji/" + emojiName + ".png");
                     addImageMessage("나", imageBytes);
                     ClientSocket.sendImageMessage(chatId, imageBytes);
+
+                    // 이모티콘 선택 창 닫기 후 새로 열기 (갱신)
+                    emojiDialog.dispose();
+                    showEmojiPopup(emojiButton);
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
             });
-            emojiPanel.add(emojiButtonItem);
+
+            // 이모티콘 아래에 개수 표시
+            JLabel countLabel = new JLabel("x" + count, SwingConstants.CENTER);
+            countLabel.setFont(new Font("Kakao", Font.PLAIN, 12));
+            countLabel.setForeground(Color.GRAY);
+
+            // 이모티콘과 개수를 패널에 추가 (수직 정렬)
+            JPanel emojiItemPanel = new JPanel();
+            emojiItemPanel.setLayout(new BoxLayout(emojiItemPanel, BoxLayout.Y_AXIS));
+            emojiItemPanel.setOpaque(false);
+
+            emojiItemPanel.add(emojiButtonItem);
+            emojiItemPanel.add(Box.createVerticalStrut(5)); // 이모티콘과 수량 사이 간격
+            emojiItemPanel.add(countLabel);
+
+            scrollPanel.add(emojiItemPanel);
         }
 
-        JScrollPane scrollPane = new JScrollPane(emojiPanel);
-        scrollPane.setPreferredSize(new Dimension(200, 200));
-        scrollPane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+        JScrollPane scrollPane = new JScrollPane(scrollPanel);
+        scrollPane.setBounds(10, 50, 280, 260);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setBorder(null); // 테두리 제거
+        emojiDialog.add(scrollPane);
 
-        JPopupMenu emojiPopup = new JPopupMenu();
-        emojiPopup.add(scrollPane);
+        JButton closeButton = new JButton("닫기");
+        closeButton.setFont(new Font("Kakao", Font.PLAIN, 12));
+        closeButton.setBounds(100, 330, 100, 30);
+        closeButton.addActionListener(e -> emojiDialog.dispose());
+        emojiDialog.add(closeButton);
 
-        emojiPopup.show(emojiButton, 0, emojiButton.getHeight());
+        emojiDialog.setVisible(true);
     }
 
     private byte[] loadImageAsByteArray(String imagePath) throws IOException {
@@ -410,7 +456,6 @@ public class ChatRoom extends JFrame {
             messagePanel.repaint();
         } catch (IOException e) {
             e.printStackTrace();
-            // 오류 메시지 표시 또는 로그 기록
         }
     }
 

@@ -71,6 +71,7 @@ public class OptionPanel extends JPanel {
     public void addPurchasedEmoji(String emojiName, int delta) {
         int currentCount = purchasedEmojis.getOrDefault(emojiName, 0);
         purchasedEmojis.put(emojiName, Math.max(currentCount + delta, 0)); // 음수 방지
+        repaint();
     }
 
     class StorageDialog extends JDialog {
@@ -103,7 +104,6 @@ public class OptionPanel extends JPanel {
 
             JPanel scrollPanel = new JPanel();
             scrollPanel.setLayout(null);
-            scrollPanel.setBackground(new Color(245, 245, 245));
 
             int yPosition = 10;
 

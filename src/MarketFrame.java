@@ -68,12 +68,12 @@ public class MarketFrame extends JFrame {
                 public void actionPerformed(ActionEvent e) {
                     if (point >= price) {
                         point -= price;
-                        JOptionPane.showMessageDialog(null, "구매 완료!");
+                        JOptionPane.showMessageDialog(MarketFrame.this, "구매 완료!");
                         updatePointLabel();
                         optionPanel.updatePoint(point);
                         optionPanel.addPurchasedEmoji(productButton.getName(), 1);
                     } else {
-                        JOptionPane.showMessageDialog(null, "포인트가 부족합니다.");
+                        JOptionPane.showMessageDialog(MarketFrame.this, "포인트가 부족합니다.");
                     }
                 }
             });
