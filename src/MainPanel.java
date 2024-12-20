@@ -1,10 +1,13 @@
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import javax.imageio.ImageIO;
 import javax.swing.*;
 
 public class MainPanel extends JPanel {
@@ -143,7 +146,12 @@ public class MainPanel extends JPanel {
             byte[] profileData = ClientSocket.userProfiles.get(friend);
             Image friendImg;
             if (profileData != null) {
-                friendImg = Toolkit.getDefaultToolkit().createImage(profileData);
+                ByteArrayInputStream bais = new ByteArrayInputStream(profileData);
+                BufferedImage bufferedImg = null;
+                try {
+                    bufferedImg = ImageIO.read(bais);
+                } catch (IOException e) {}
+                friendImg = bufferedImg.getScaledInstance(50, 50, Image.SCALE_SMOOTH);
                 friendImg = friendImg.getScaledInstance(50, 50, Image.SCALE_SMOOTH);
             } else {
                 ImageIcon defaultIcon = new ImageIcon(TalkApp.class.getResource("/icon/profile.png"));

@@ -1,15 +1,14 @@
-
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -22,6 +21,7 @@ public class ChatPanel extends JPanel {
     List<ChatListItem> chatItems = new ArrayList<>();
 
     public ChatPanel() {
+        ClientSocket.setChatPanel(this);
         setBackground(Color.WHITE);
         setBounds(73, 0, 307, 613);
         setLayout(null);
@@ -41,21 +41,29 @@ public class ChatPanel extends JPanel {
         chatScrollPane.setBorder(null);
         add(chatScrollPane);
 
-        // 초기 예시 아이템(기존 코드)
-        addChatEntry("chatId1", List.of("하여린"), "네프 과제 다했어??");
+//        // 초기 예시 아이템(기존 코드)
+//        addChatEntry("chatId1", List.of("하여린"), "네프 과제 다했어??");
     }
 
     // 새로운 채팅 항목 추가 메서드
     public void addChatEntry(String chatId, List<String> participants, String lastMessage) {
-        ChatListItem item = new ChatListItem(chatId, participants, lastMessage);
+        // 자신의 이름을 제외한 참가자 리스트 생성
+        List<String> filteredParticipants = new ArrayList<>();
+        for (String participant : participants) {
+            if (!participant.equals(ClientSocket.name)) {
+                filteredParticipants.add(participant);
+            }
+        }
+
+        ChatListItem item = new ChatListItem(chatId, filteredParticipants, lastMessage);
         chatItems.add(item);
 
         int y = (chatItems.size() - 1) * 80 + 5; // 각 항목당 높이를 80이라 가정
 
-        // 프로필 버튼 추가
-        JButton profileButton = item.getProfileButton();
-        profileButton.setBounds(1, y, 60, 60);
-        chatListPanel.add(profileButton);
+        // 프로필 패널 추가
+        JPanel profilePanel = item.getProfilePanel();
+        profilePanel.setBounds(1, y, 60, 60);
+        chatListPanel.add(profilePanel);
 
         // 이름 레이블 추가
         JLabel nameLabel = item.getNameLabel();
@@ -67,18 +75,18 @@ public class ChatPanel extends JPanel {
         lastMessageLabel.setBounds(65, y + 32, 200, 16);
         chatListPanel.add(lastMessageLabel);
 
-        // ActionListener 추가
-        ActionListener openChatRoomListener = new ActionListener() {
+        // MouseListener 추가
+        profilePanel.addMouseListener(new MouseAdapter() {
             @Override
-            public void actionPerformed(ActionEvent e) {
+            public void mouseClicked(MouseEvent e) {
                 openChatRoom(chatId, participants);
             }
-        };
-        profileButton.addActionListener(openChatRoomListener);
+        });
+
         nameLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                openChatRoomListener.actionPerformed(null);
+                openChatRoom(chatId, participants);
             }
         });
 
@@ -114,7 +122,7 @@ public class ChatPanel extends JPanel {
 
         if (toRemove != null) {
             chatItems.remove(toRemove);
-            chatListPanel.remove(toRemove.getProfileButton());
+            chatListPanel.remove(toRemove.getProfilePanel());
             chatListPanel.remove(toRemove.getNameLabel());
             chatListPanel.remove(toRemove.getLastMessageLabel());
 
@@ -129,7 +137,7 @@ public class ChatPanel extends JPanel {
     private void updateChatList() {
         int y = 5; // 초기 Y 좌표
         for (ChatListItem item : chatItems) {
-            item.getProfileButton().setBounds(1, y, 60, 60);
+            item.getProfilePanel().setBounds(1, y, 60, 60);
             item.getNameLabel().setBounds(65, y + 12, 200, 16);
             item.getLastMessageLabel().setBounds(65, y + 32, 200, 16);
             y += 80;
@@ -143,23 +151,25 @@ public class ChatPanel extends JPanel {
     class ChatListItem {
         private String chatId;
         List<String> participants;
-        private JButton profileButton;
+        private JPanel profilePanel;
         private JLabel nameLabel;
         private JLabel lastMessageLabel;
 
         public ChatListItem(String chatId, List<String> participants, String lastMessage) {
             this.chatId = chatId;
             this.participants = participants;
-            this.profileButton = new JButton();
+            this.profilePanel = new JPanel();
             this.nameLabel = new JLabel(String.join(", ", participants));
             this.lastMessageLabel = new JLabel(lastMessage);
 
             initializeUI();
+            setProfileImages();
         }
 
         private void initializeUI() {
-            // 프로필 이미지 설정
-            setProfileImages();
+            // 프로필 패널 설정
+            profilePanel.setLayout(null);
+            profilePanel.setBackground(new Color(0, 0, 0, 0)); // 투명 배경
 
             // 이름 레이블 설정
             nameLabel.setFont(new Font("Kakao", Font.BOLD, 13));
@@ -167,50 +177,69 @@ public class ChatPanel extends JPanel {
             // 마지막 메시지 레이블 설정
             lastMessageLabel.setFont(new Font("Kakao", Font.PLAIN, 12));
             lastMessageLabel.setForeground(new Color(116, 116, 116));
-
-            // 프로필 버튼 설정
-            profileButton.setContentAreaFilled(false);
-            profileButton.setBorderPainted(false);
-            profileButton.setFocusPainted(false);
         }
 
         void setProfileImages() {
-            // 참여자들의 프로필 이미지를 조합하여 표시
-            int imageSize = 30;
-            int overlap = 10;
+            int imageSize = 60; // 이미지 크기
+            int overlap = 25;   // 겹치는 정도
             int totalImages = participants.size();
 
-            BufferedImage combinedImage = new BufferedImage(
-                    imageSize + (totalImages - 1) * (imageSize - overlap),
-                    imageSize,
-                    BufferedImage.TYPE_INT_ARGB
-            );
-            Graphics g = combinedImage.getGraphics();
+            // 프로필 패널 초기화
+            profilePanel.removeAll();
+            profilePanel.setPreferredSize(new Dimension(imageSize + (totalImages - 1) * (imageSize - overlap), imageSize));
+
+            boolean profileAdded = false; // 프로필 이미지를 한 번만 추가하도록 제어
 
             for (int i = 0; i < totalImages; i++) {
                 String userName = participants.get(i);
                 byte[] profileData = ClientSocket.userProfiles.get(userName);
+                JLabel profileLabel = new JLabel();
+
                 Image profileImage;
                 if (profileData != null && profileData.length > 0) {
-                    profileImage = Toolkit.getDefaultToolkit().createImage(profileData);
+                    ByteArrayInputStream bais = new ByteArrayInputStream(profileData);
+                    BufferedImage bufferedImg = null;
+                    try {
+                        bufferedImg = ImageIO.read(bais);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        bufferedImg = null; // 기본 이미지로 대체
+                    }
+                    profileImage = bufferedImg != null
+                            ? bufferedImg.getScaledInstance(imageSize, imageSize, Image.SCALE_SMOOTH)
+                            : loadDefaultImage().getScaledInstance(imageSize, imageSize, Image.SCALE_SMOOTH);
                 } else {
-                    ImageIcon defaultIcon = new ImageIcon(getClass().getResource("/icon/profile.png"));
-                    profileImage = defaultIcon.getImage();
+                    profileImage = loadDefaultImage().getScaledInstance(imageSize, imageSize, Image.SCALE_SMOOTH);
                 }
-                profileImage = profileImage.getScaledInstance(imageSize, imageSize, Image.SCALE_SMOOTH);
-                g.drawImage(profileImage, i * (imageSize - overlap), 0, null);
-            }
-            g.dispose();
 
-            profileButton.setIcon(new ImageIcon(combinedImage));
+                // 프로필 이미지를 한 번만 추가
+                if (!profileAdded) {
+                    profileLabel.setIcon(new ImageIcon(profileImage));
+                    profileLabel.setBounds(0, 0, imageSize, imageSize); // 겹치지 않도록 위치 설정
+                    profilePanel.add(profileLabel);
+                    profileAdded = true;
+                }
+            }
+
+            profilePanel.revalidate();
+            profilePanel.repaint();
+        }
+
+        private Image loadDefaultImage() {
+            try {
+                return new ImageIcon(ChatPanel.class.getResource("/icon/profile.png")).getImage();
+            } catch (IllegalArgumentException e) {
+                e.printStackTrace();
+                return null;
+            }
         }
 
         public String getChatId() {
             return chatId;
         }
 
-        public JButton getProfileButton() {
-            return profileButton;
+        public JPanel getProfilePanel() {
+            return profilePanel;
         }
 
         public JLabel getNameLabel() {

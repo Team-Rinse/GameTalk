@@ -1,4 +1,5 @@
 import java.awt.*;
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -7,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 
 public class ClientSocket {
@@ -265,48 +267,43 @@ public class ClientSocket {
 	                        break;
 	                    }
 						// ClientThread 내부
-						case "PROFILE_UPDATED": {
+						case "PROFILE_UPDATED":
 							String updatedName = is.readUTF();
 							int imgLen = is.readInt();
-							byte[] imgData = null;
+							byte[] imgData;
 							if (imgLen > 0) {
 								imgData = new byte[imgLen];
 								is.readFully(imgData);
-							}
-							String updatedStatus = is.readUTF();
-
-							// userProfiles, userStatusMessages 맵 업데이트
+							} else {
+                                imgData = null;
+                            }
+                            String updatedStatus = is.readUTF();
 							userProfiles.put(updatedName, imgData);
 							userStatusMessages.put(updatedName, updatedStatus);
 
-							// 만약 updatedName이 본인이면 MainPanel에 반영
-							if (updatedName.equals(ClientSocket.name)) {
-								if (mainPanel != null) {
-									// 이름, 상태메시지, 프로필 이미지 업데이트
-									mainPanel.setUserName(updatedName);
-									if (imgData != null) {
-										Image profileImg = Toolkit.getDefaultToolkit().createImage(imgData);
-										mainPanel.updateProfileImage(profileImg);
+							SwingUtilities.invokeLater(() -> {
+								// 메인 패널의 프로필 및 상태메시지 갱신
+								if (updatedName.equals(ClientSocket.name)) {
+									if (mainPanel != null) {
+                                        try {
+                                            mainPanel.updateProfileImage(imgData != null ? ImageIO.read(new ByteArrayInputStream(imgData)) : null);
+                                        } catch (IOException e) { }
+                                        mainPanel.updateStatusMessage(updatedStatus);
 									}
-									mainPanel.updateStatusMessage(updatedStatus);
 								}
-							}
 
-							// 모든 채팅방의 프로필 이미지 갱신
-							if (chatPanel != null) {
-								SwingUtilities.invokeLater(() -> {
+								// chatPanel 갱신
+								if (chatPanel != null) {
 									for (ChatPanel.ChatListItem item : chatPanel.chatItems) {
-										if (item.participants.contains(updatedName)) {
-											item.setProfileImages(); // 프로필 이미지 재설정 메서드 필요
+										if (item.participants.contains(updatedName) && !item.getNameLabel().getText().equals(name)) {
+											item.setProfileImages();
 										}
 									}
 									chatPanel.chatListPanel.revalidate();
 									chatPanel.chatListPanel.repaint();
-								});
-							}
-
+								}
+							});
 							break;
-						}
 						case "CHAT_CREATED": {
 							String chatId = is.readUTF();
 							int participantCount = is.readInt();

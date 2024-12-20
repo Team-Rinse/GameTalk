@@ -7,7 +7,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.util.prefs.Preferences;
 
 public class MyProfile extends JFrame {
 
@@ -18,12 +17,9 @@ public class MyProfile extends JFrame {
     private JLabel profilePic;
     private MainPanel mainPanel; // MainPanel 객체를 저장할 변수 추가
 
-    private Preferences prefs;
 
     public MyProfile(MainPanel mainPanel) {
         this.mainPanel = mainPanel; // MainPanel 객체를 받아옴
-
-        prefs = Preferences.userNodeForPackage(MyProfile.class);
 
         setBounds(100, 100, 230, 500); // 창 높이를 늘림 (상태 메시지 추가)
         contentPane = new JPanel();
@@ -88,8 +84,7 @@ public class MyProfile extends JFrame {
         });
         contentPane.add(editNameBtn);
 
-        // 상태 메시지 추가
-        statusMessageField = new JTextField(prefs.get("statusMessage", "상태 메시지를 입력하세요")); // 저장된 상태 메시지 불러오기
+        statusMessageField = new JTextField(); // 저장된 상태 메시지 불러오기
         statusMessageField.setBounds(70, 300, 90, 20);
         statusMessageField.setBorder(null);
         contentPane.add(statusMessageField);
@@ -108,7 +103,6 @@ public class MyProfile extends JFrame {
                     // 서버로 업데이트 요청
                     ClientSocket.updateProfile(nameField.getText(), getCurrentProfileImageBytes(), newStatusMessage);
 
-                    prefs.put("statusMessage", newStatusMessage); // 로컬 저장
                     mainPanel.updateStatusMessage(newStatusMessage); // MainPanel에 반영
                 } else {
                     statusMessageField.setBackground(new Color(240, 240, 240));
@@ -146,8 +140,6 @@ public class MyProfile extends JFrame {
                 // 서버로 프로필 업데이트 전송
                 ClientSocket.updateProfile(nameField.getText(), imageBytes, statusMessageField.getText());
 
-                // 로컬 저장 (선택 사항)
-                prefs.put("profileImagePath", selectedFile.getPath());
                 mainPanel.updateProfileImage(newProfileImage); // MainPanel에 반영
 
             } catch (IOException ex) {
