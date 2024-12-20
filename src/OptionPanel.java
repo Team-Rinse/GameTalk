@@ -8,7 +8,7 @@ import javax.swing.*;
 public class OptionPanel extends JPanel {
 
     private static final long serialVersionUID = 1L;
-    private int point = 100900;
+    private int point = 0;
     private JLabel coinLabel;
     HashMap<String, Integer> purchasedEmojis;
 

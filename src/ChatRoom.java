@@ -205,11 +205,6 @@ public class ChatRoom extends JFrame {
         panel.add(bottomPanel, BorderLayout.SOUTH);
 
         add(panel);
-
-        // 테스트용 메시지 추가
-        addOtherMessage("참여자1", "빼이~");
-        addOtherMessage("참여자2", "GOAT");
-        addMyMessage("빼이ㅋㅋ");
     }
 
     // ChatRoom 클래스 내에 추가
